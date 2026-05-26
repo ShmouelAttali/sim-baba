@@ -42,6 +42,7 @@ export interface CardDef {
 export interface CardInstance {
   instanceId: string;
   defId: string;
+  drawOrder?: number;
 }
 
 export interface PlayerState {
@@ -59,6 +60,10 @@ export interface PlayerState {
   milk: number;
   infrastructure: number;
   danger: number;
+  mofetUsedThisTurn: boolean;
+  nextDrawOrder: number;
+  factionMarketDeck: CardInstance[];
+  factionMarketVisible: CardInstance[];
 }
 
 export interface MarketState {
@@ -66,8 +71,6 @@ export interface MarketState {
   generalVisible: CardInstance[];
   mofetDeck: CardInstance[];
   mofetVisible: CardInstance[];
-  factionDecks: Partial<Record<FactionId, CardInstance[]>>;
-  factionVisible: Partial<Record<FactionId, CardInstance[]>>;
 }
 
 export interface FactionDef {
@@ -76,8 +79,8 @@ export interface FactionDef {
   dangerName: string;
   startingInfrastructure: number;
   startingFollowers: number;
-  startingMilk: number;
-  abilityName: string;
+  startingMilk?: number;
+  abilityName?: string;
   abilityText: string;
   outburstText: string;
 }

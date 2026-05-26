@@ -1,7 +1,7 @@
-import type { CardDef, FactionDef, FactionId, GameState, PlayerState } from "../types/game";
+import type { CardDef, CardInstance, FactionDef, FactionId, GameState, PlayerState } from "../types/game";
 import { buildMarket, drawCards, makeInstanceId, shuffle } from "./deck";
 
-export const CURRENT_SCHEMA_VERSION = 2;
+export const CURRENT_SCHEMA_VERSION = 4;
 const STORAGE_KEY = "simBabaGame";
 
 export function getFaction(id: FactionId, factions: FactionDef[]): FactionDef {
@@ -16,11 +16,12 @@ export function createPlayer(
   factions: FactionDef[]
 ): PlayerState {
   const faction = getFaction(factionId, factions);
+
+  // Starting deck
   const startingCards = allCards.filter(
     (c) => c.source === "starting_deck" && c.faction === factionId
   );
-
-  let instances = [];
+  let instances: CardInstance[] = [];
   let idx = 0;
   for (const card of startingCards) {
     for (let i = 0; i < card.copies; i++) {
@@ -28,6 +29,22 @@ export function createPlayer(
     }
   }
   instances = shuffle(instances);
+
+  // Per-player faction market
+  const factionCards = allCards.filter(
+    (c) => c.source === "faction_market" && c.faction === factionId
+  );
+  let factionInstances: CardInstance[] = [];
+  let fi = 0;
+  for (const card of factionCards) {
+    for (let i = 0; i < card.copies; i++) {
+      factionInstances.push({
+        instanceId: makeInstanceId(`${factionId}-${card.id}`, fi++),
+        defId: card.id,
+      });
+    }
+  }
+  factionInstances = shuffle(factionInstances);
 
   return {
     id,
@@ -41,9 +58,13 @@ export function createPlayer(
     mofets: [],
     followers: faction.startingFollowers,
     money: 0,
-    milk: faction.startingMilk,
+    milk: 0,
     infrastructure: faction.startingInfrastructure,
     danger: 0,
+    mofetUsedThisTurn: false,
+    nextDrawOrder: 0,
+    factionMarketDeck: factionInstances.slice(5),
+    factionMarketVisible: factionInstances.slice(0, 5),
   };
 }
 
@@ -67,7 +88,7 @@ export function createNewGame(
     )
   );
 
-  const market = buildMarket(allCards);
+  const market = buildMarket(allCards, setupPlayers.length);
   const log: string[] = ["משחק חדש התחיל!"];
 
   const drawnPlayers: PlayerState[] = [];

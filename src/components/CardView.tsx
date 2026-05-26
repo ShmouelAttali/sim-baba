@@ -10,6 +10,8 @@ interface Props {
   isNew?: boolean;
   extraClass?: string;
   compact?: boolean;
+  mofetDisabled?: boolean;
+  isPlayed?: boolean;
 }
 
 const TYPE_LABELS: Record<string, string> = {
@@ -57,6 +59,58 @@ const FACTION_LABELS: Record<string, string> = {
   all:     "כל הפלגות",
 };
 
+const TAG_COLORS: Record<string, { bg: string; text: string }> = {
+  "נס":           { bg: "#fef3c7", text: "#92400e" },
+  "מבצע":         { bg: "#dbeafe", text: "#1e40af" },
+  "לימוד":        { bg: "#dcfce7", text: "#166534" },
+  "לומד":         { bg: "#bbf7d0", text: "#14532d" },
+  "מוסד לימוד":   { bg: "#a7f3d0", text: "#065f46" },
+  "שליח":         { bg: "#e0e7ff", text: "#3730a3" },
+  "חברותא":       { bg: "#ede9fe", text: "#5b21b6" },
+  "ריקוד":        { bg: "#fce7f3", text: "#9d174d" },
+  "שמחה":         { bg: "#fdf2f8", text: "#86198f" },
+  "התבודדות":     { bg: "#f0fdf4", text: "#166534" },
+  "גבאי":         { bg: "#fafafa", text: "#374151" },
+  "תורם":         { bg: "#fff7ed", text: "#9a3412" },
+  "הפצה":         { bg: "#eff6ff", text: "#1d4ed8" },
+  "ניגון":        { bg: "#fdf4ff", text: "#7e22ce" },
+  "ניהול":        { bg: "#f8fafc", text: "#475569" },
+  "כסף":          { bg: "#fefce8", text: "#713f12" },
+  "חסד":          { bg: "#f0fdf4", text: "#15803d" },
+  "צרה":          { bg: "#fff1f2", text: "#9f1239" },
+  "מופת":         { bg: "#faf5ff", text: "#7c3aed" },
+  "הילולה":       { bg: "#fff7ed", text: "#c2410c" },
+  "נסיעה":        { bg: "#eff6ff", text: "#1e40af" },
+  "סיפור":        { bg: "#fdf4ff", text: "#6d28d9" },
+  "הנהגה":        { bg: "#f1f5f9", text: "#334155" },
+  "מוסר":         { bg: "#f0fdf4", text: "#166534" },
+  "קאמבק":        { bg: "#fff1f2", text: "#be123c" },
+  "ציפיות":       { bg: "#fffbeb", text: "#b45309" },
+};
+
+function TagPills({ tags, compact = false }: { tags: string[]; compact?: boolean }) {
+  if (!tags || tags.length === 0) return null;
+  const displayTags = compact && tags.length > 3 ? tags.slice(0, 2) : tags;
+  const overflow    = compact && tags.length > 3 ? tags.length - 2 : 0;
+  return (
+    <div className="flex flex-wrap gap-1">
+      {displayTags.map((tag) => {
+        const c = TAG_COLORS[tag] ?? { bg: "#f3f4f6", text: "#374151" };
+        return (
+          <span key={tag} style={{ backgroundColor: c.bg, color: c.text, fontSize: "11px", padding: "2px 8px", borderRadius: "9999px" }}>
+            {tag}
+          </span>
+        );
+      })}
+      {overflow > 0 && (
+        <span style={{ backgroundColor: "#f3f4f6", color: "#374151", fontSize: "11px", padding: "2px 8px", borderRadius: "9999px" }}>
+          +{overflow}
+        </span>
+      )}
+    </div>
+  );
+}
+
 export default function CardView({
   instance,
   def,
@@ -67,6 +121,8 @@ export default function CardView({
   isNew = false,
   extraClass = "",
   compact = false,
+  mofetDisabled = false,
+  isPlayed = false,
 }: Props) {
   const isTrouble     = def.type === "trouble";
   const isMofet       = def.type === "mofet";
@@ -94,8 +150,16 @@ export default function CardView({
           minHeight: "200px",
           backgroundColor: bg,
           border: `${inHandTrouble ? "3px" : "2px"} solid ${borderColor}`,
+          ...(isPlayed ? { opacity: 0.6, filter: "grayscale(80%)" } : {}),
         }}
       >
+        {/* Played stamp */}
+        {isPlayed && (
+          <div className="text-center text-[10px] font-bold text-green-700 bg-green-100 rounded px-1 py-0.5 leading-none">
+            שוחק ✓
+          </div>
+        )}
+
         {/* Name */}
         <div
           className="font-bold text-stone-800 leading-tight line-clamp-2"
@@ -127,21 +191,21 @@ export default function CardView({
 
         {/* Requirements */}
         {def.requirements && (
-          <div className="text-stone-600 leading-tight line-clamp-3" style={{ fontSize: "12px" }} title={def.requirements}>
+          <div className="text-stone-600 leading-tight line-clamp-2" style={{ fontSize: "12px" }} title={def.requirements}>
             {def.requirements}
           </div>
         )}
 
         {/* milkText */}
         {def.milkText && (
-          <div className="text-stone-600 leading-tight line-clamp-3" style={{ fontSize: "12px" }} title={def.milkText}>
+          <div className="text-stone-600 leading-tight line-clamp-2" style={{ fontSize: "12px" }} title={def.milkText}>
             {def.milkText}
           </div>
         )}
 
         {/* yardText */}
         {def.yardText && (
-          <div className="text-emerald-700 leading-tight line-clamp-3" style={{ fontSize: "12px" }} title={def.yardText}>
+          <div className="text-emerald-700 leading-tight line-clamp-2" style={{ fontSize: "12px" }} title={def.yardText}>
             חצר: {def.yardText}
           </div>
         )}
@@ -153,7 +217,7 @@ export default function CardView({
             style={{
               fontSize: "12px",
               display: "-webkit-box",
-              WebkitLineClamp: 5,
+              WebkitLineClamp: 3,
               WebkitBoxOrient: "vertical",
               overflow: "hidden",
             }}
@@ -163,17 +227,41 @@ export default function CardView({
           </div>
         )}
 
+        {/* Tags */}
+        {def.tags && def.tags.length > 0 && <TagPills tags={def.tags} compact={true} />}
+
         {/* Single action button */}
         {onAction && (
           <div className="mt-auto pt-1 flex flex-col gap-1">
             {location === "hand" && (
-              <button
-                onClick={() => onAction("play", instance.instanceId)}
-                className="bg-blue-600 hover:bg-blue-500 text-white px-1.5 py-1 rounded transition-colors"
-                style={{ fontSize: "12px" }}
-              >
-                שחק / לחלוב
-              </button>
+              isPlayed ? (
+                <button
+                  onClick={() => onAction("returnToHand", instance.instanceId)}
+                  className="bg-stone-500 hover:bg-stone-400 text-white px-1.5 py-1 rounded transition-colors"
+                  style={{ fontSize: "12px" }}
+                >
+                  החזר
+                </button>
+              ) : (
+                <>
+                  <button
+                    onClick={() => onAction("play", instance.instanceId)}
+                    className="bg-blue-600 hover:bg-blue-500 text-white px-1.5 py-1 rounded transition-colors"
+                    style={{ fontSize: "12px" }}
+                  >
+                    שחק / לחלוב
+                  </button>
+                  {def.yardText && (
+                    <button
+                      onClick={() => onAction("yard", instance.instanceId)}
+                      className="bg-emerald-600 hover:bg-emerald-500 px-1.5 py-1 rounded transition-colors text-white"
+                      style={{ fontSize: "11px" }}
+                    >
+                      העמד בחצר
+                    </button>
+                  )}
+                </>
+              )
             )}
             {location === "played" && (
               <button
@@ -185,23 +273,34 @@ export default function CardView({
               </button>
             )}
             {isMarket && (
-              <button
-                onClick={() => {
-                  if (location === "market-general") onAction("buy-general", instance.instanceId);
-                  else if (location === "market-faction") onAction("buy-faction", instance.instanceId);
-                  else onAction("buy-mofet", instance.instanceId);
-                }}
-                className={`px-1.5 py-1 rounded transition-colors text-white leading-none ${
-                  isMofetMarket
-                    ? canAffordMilk  ? "bg-purple-600 hover:bg-purple-500" : "bg-red-700 hover:bg-red-600"
-                    : canAffordMoney ? "bg-amber-600 hover:bg-amber-500"   : "bg-red-700 hover:bg-red-600"
-                }`}
-                style={{ fontSize: "12px" }}
-              >
-                {isMofetMarket
-                  ? canAffordMilk  ? `בצע מופת (${def.costMilk} 🥛)`  : `חסר ${milkShortage} 🥛`
-                  : canAffordMoney ? `קנה (${def.costMoney} 💰)`       : `חסר ${moneyShortage} 💰`}
-              </button>
+              isMofetMarket && mofetDisabled ? (
+                <button
+                  disabled
+                  title="כבר ביצעת מופת בתור זה"
+                  className="px-1.5 py-1 rounded text-stone-400 bg-stone-600 cursor-not-allowed leading-none"
+                  style={{ fontSize: "12px" }}
+                >
+                  כבר ביצעת מופת בתור זה
+                </button>
+              ) : (
+                <button
+                  onClick={() => {
+                    if (location === "market-general") onAction("buy-general", instance.instanceId);
+                    else if (location === "market-faction") onAction("buy-faction", instance.instanceId);
+                    else onAction("buy-mofet", instance.instanceId);
+                  }}
+                  className={`px-1.5 py-1 rounded transition-colors text-white leading-none ${
+                    isMofetMarket
+                      ? canAffordMilk  ? "bg-purple-600 hover:bg-purple-500" : "bg-red-700 hover:bg-red-600"
+                      : canAffordMoney ? "bg-amber-600 hover:bg-amber-500"   : "bg-red-700 hover:bg-red-600"
+                  }`}
+                  style={{ fontSize: "12px" }}
+                >
+                  {isMofetMarket
+                    ? canAffordMilk  ? `בצע מופת (${def.costMilk} 🥛)`  : `חסר ${milkShortage} 🥛`
+                    : canAffordMoney ? `קנה (${def.costMoney} 💰)`       : `חסר ${moneyShortage} 💰`}
+                </button>
+              )
             )}
             {location === "yard" && (
               <button
@@ -245,8 +344,16 @@ export default function CardView({
         minHeight: "230px",
         backgroundColor: bg,
         border: `${inHandTrouble ? "3px" : "2px"} solid ${borderColor}`,
+        ...(isPlayed ? { opacity: 0.6, filter: "grayscale(80%)" } : {}),
       }}
     >
+      {/* Played stamp */}
+      {isPlayed && (
+        <div className="text-center text-[10px] font-bold text-green-700 bg-green-100 rounded px-1 py-0.5 leading-none">
+          שוחק ✓
+        </div>
+      )}
+
       {/* Name + special badges */}
       <div className="flex items-start justify-between gap-0.5">
         <div
@@ -317,32 +424,39 @@ export default function CardView({
         </div>
       )}
 
+      {/* Tags */}
+      {def.tags && def.tags.length > 0 && <TagPills tags={def.tags} />}
+
       {/* Action buttons */}
       {onAction && (
         <div className="mt-auto pt-1 flex flex-col gap-1">
           {location === "hand" && (
-            <>
+            isPlayed ? (
               <button
-                onClick={() => onAction("play", instance.instanceId)}
-                className="bg-blue-600 hover:bg-blue-500 text-white text-xs px-1.5 py-1 rounded transition-colors"
+                onClick={() => onAction("returnToHand", instance.instanceId)}
+                className="bg-stone-500 hover:bg-stone-400 text-white px-1.5 py-1 rounded transition-colors"
+                style={{ fontSize: "12px" }}
               >
-                שחק / לחלוב
+                החזר
               </button>
-              {(def.type === "person" || def.type === "institution") && (
+            ) : (
+              <>
                 <button
-                  onClick={() => onAction("yard", instance.instanceId)}
-                  className="bg-emerald-600 hover:bg-emerald-500 text-white text-xs px-1.5 py-1 rounded transition-colors"
+                  onClick={() => onAction("play", instance.instanceId)}
+                  className="bg-blue-600 hover:bg-blue-500 text-white text-xs px-1.5 py-1 rounded transition-colors"
                 >
-                  העמד בחצר
+                  שחק / לחלוב
                 </button>
-              )}
-              <button
-                onClick={() => onAction("discard", instance.instanceId)}
-                className="bg-stone-400 hover:bg-stone-500 text-white text-xs px-1.5 py-1 rounded transition-colors"
-              >
-                השלך
-              </button>
-            </>
+                {def.yardText && (
+                  <button
+                    onClick={() => onAction("yard", instance.instanceId)}
+                    className="bg-emerald-600 hover:bg-emerald-500 text-white text-xs px-1.5 py-1 rounded transition-colors"
+                  >
+                    העמד בחצר
+                  </button>
+                )}
+              </>
+            )
           )}
           {location === "played" && (
             <>
@@ -361,22 +475,32 @@ export default function CardView({
             </>
           )}
           {isMarket && (
-            <button
-              onClick={() => {
-                if (location === "market-general") onAction("buy-general", instance.instanceId);
-                else if (location === "market-faction") onAction("buy-faction", instance.instanceId);
-                else onAction("buy-mofet", instance.instanceId);
-              }}
-              className={`text-xs px-1.5 py-1 rounded transition-colors text-white leading-none ${
-                isMofetMarket
-                  ? canAffordMilk  ? "bg-purple-600 hover:bg-purple-500" : "bg-red-700 hover:bg-red-600"
-                  : canAffordMoney ? "bg-amber-600 hover:bg-amber-500"   : "bg-red-700 hover:bg-red-600"
-              }`}
-            >
-              {isMofetMarket
-                ? canAffordMilk  ? `בצע מופת (${def.costMilk} 🥛)`  : `חסר ${milkShortage} 🥛`
-                : canAffordMoney ? `קנה (${def.costMoney} 💰)`       : `חסר ${moneyShortage} 💰`}
-            </button>
+            isMofetMarket && mofetDisabled ? (
+              <button
+                disabled
+                title="כבר ביצעת מופת בתור זה"
+                className="text-xs px-1.5 py-1 rounded text-stone-400 bg-stone-600 cursor-not-allowed leading-none"
+              >
+                כבר ביצעת מופת בתור זה
+              </button>
+            ) : (
+              <button
+                onClick={() => {
+                  if (location === "market-general") onAction("buy-general", instance.instanceId);
+                  else if (location === "market-faction") onAction("buy-faction", instance.instanceId);
+                  else onAction("buy-mofet", instance.instanceId);
+                }}
+                className={`text-xs px-1.5 py-1 rounded transition-colors text-white leading-none ${
+                  isMofetMarket
+                    ? canAffordMilk  ? "bg-purple-600 hover:bg-purple-500" : "bg-red-700 hover:bg-red-600"
+                    : canAffordMoney ? "bg-amber-600 hover:bg-amber-500"   : "bg-red-700 hover:bg-red-600"
+                }`}
+              >
+                {isMofetMarket
+                  ? canAffordMilk  ? `בצע מופת (${def.costMilk} 🥛)`  : `חסר ${milkShortage} 🥛`
+                  : canAffordMoney ? `קנה (${def.costMoney} 💰)`       : `חסר ${moneyShortage} 💰`}
+              </button>
+            )
           )}
           {location === "yard" && (
             <button

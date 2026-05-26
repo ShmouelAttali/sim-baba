@@ -22,6 +22,7 @@ export function drawCards(
   let discard = [...player.discard];
   let hand = [...player.hand];
   let newLog = [...log];
+  let nextDrawOrder = player.nextDrawOrder ?? 0;
 
   for (let i = 0; i < count; i++) {
     if (deck.length === 0) {
@@ -30,12 +31,13 @@ export function drawCards(
       discard = [];
       newLog = [...newLog, `דק ריק — זרוקים עורבבו לדק (${player.name}).`];
     }
-    hand = [...hand, deck[0]];
+    const drawnCard = { ...deck[0], drawOrder: nextDrawOrder++ };
+    hand = [...hand, drawnCard];
     deck = deck.slice(1);
   }
 
   return {
-    player: { ...player, deck, discard, hand },
+    player: { ...player, deck, discard, hand, nextDrawOrder },
     log: newLog,
   };
 }
@@ -52,7 +54,7 @@ export function discardHandAndPlayed(player: PlayerState): PlayerState {
 export function endTurn(game: GameState): GameState {
   const currentPlayer = game.players[game.currentPlayerIndex];
   const afterDiscard = discardHandAndPlayed(currentPlayer);
-  const afterMoney = { ...afterDiscard, money: 0 };
+  const afterMoney = { ...afterDiscard, money: 0, mofetUsedThisTurn: false };
 
   const { player: afterDraw, log: newLog } = drawCards(afterMoney, 5, [
     ...game.log,
@@ -87,148 +89,60 @@ export function buyCard(
   let market = { ...game.market };
   let log = [...game.log];
 
-  if (fromMarket === "general" || fromMarket === "faction") {
+  if (fromMarket === "general") {
     const cost = cardDef.costMoney ?? 0;
-    player = { ...player, money: player.money - cost };
-    player = { ...player, discard: [...player.discard, cardInstance] };
+    player = { ...player, money: player.money - cost, discard: [...player.discard, cardInstance] };
 
-    if (fromMarket === "general") {
-      const visibleIdx = market.generalVisible.findIndex(
-        (c) => c.instanceId === cardInstance.instanceId
-      );
-      if (visibleIdx !== -1) {
-        const newVisible = [...market.generalVisible];
-        if (market.generalDeck.length > 0) {
-          newVisible[visibleIdx] = market.generalDeck[0];
-          market = {
-            ...market,
-            generalVisible: newVisible,
-            generalDeck: market.generalDeck.slice(1),
-          };
-        } else {
-          newVisible.splice(visibleIdx, 1);
-          market = { ...market, generalVisible: newVisible };
-        }
-      }
-    } else {
-      const playerFaction = game.players[playerIndex].factionId;
-      const factionVis = [...(market.factionVisible[playerFaction] ?? [])];
-      const factionDeck = [...(market.factionDecks[playerFaction] ?? [])];
-      const visIdx = factionVis.findIndex((c) => c.instanceId === cardInstance.instanceId);
-      if (visIdx !== -1) {
-        if (factionDeck.length > 0) {
-          factionVis[visIdx] = factionDeck[0];
-          market = {
-            ...market,
-            factionVisible: { ...market.factionVisible, [playerFaction]: factionVis },
-            factionDecks: { ...market.factionDecks, [playerFaction]: factionDeck.slice(1) },
-          };
-        } else {
-          factionVis.splice(visIdx, 1);
-          market = {
-            ...market,
-            factionVisible: { ...market.factionVisible, [playerFaction]: factionVis },
-          };
-        }
-      }
-    }
-    log = [...log, `${player.name} קנה: ${cardDef.name}`];
-  } else {
-    const cost = cardDef.costMilk ?? 0;
-    player = { ...player, milk: player.milk - cost };
-    player = { ...player, mofets: [...player.mofets, cardInstance] };
-
-    const visibleIdx = market.mofetVisible.findIndex(
+    const visibleIdx = market.generalVisible.findIndex(
       (c) => c.instanceId === cardInstance.instanceId
     );
     if (visibleIdx !== -1) {
-      const newVisible = [...market.mofetVisible];
-      if (market.mofetDeck.length > 0) {
-        newVisible[visibleIdx] = market.mofetDeck[0];
-        market = {
-          ...market,
-          mofetVisible: newVisible,
-          mofetDeck: market.mofetDeck.slice(1),
-        };
+      const newVisible = [...market.generalVisible];
+      if (market.generalDeck.length > 0) {
+        newVisible[visibleIdx] = market.generalDeck[0];
+        market = { ...market, generalVisible: newVisible, generalDeck: market.generalDeck.slice(1) };
       } else {
         newVisible.splice(visibleIdx, 1);
-        market = { ...market, mofetVisible: newVisible };
+        market = { ...market, generalVisible: newVisible };
       }
     }
+    log = [...log, `${player.name} קנה: ${cardDef.name}`];
+
+  } else if (fromMarket === "faction") {
+    const cost = cardDef.costMoney ?? 0;
+    player = { ...player, money: player.money - cost, discard: [...player.discard, cardInstance] };
+
+    const factionVis = [...(player.factionMarketVisible ?? [])];
+    const factionDeck = [...(player.factionMarketDeck ?? [])];
+    const visIdx = factionVis.findIndex((c) => c.instanceId === cardInstance.instanceId);
+    if (visIdx !== -1) {
+      if (factionDeck.length > 0) {
+        factionVis[visIdx] = factionDeck[0];
+        player = { ...player, factionMarketVisible: factionVis, factionMarketDeck: factionDeck.slice(1) };
+      } else {
+        factionVis.splice(visIdx, 1);
+        player = { ...player, factionMarketVisible: factionVis };
+      }
+    }
+    log = [...log, `${player.name} קנה: ${cardDef.name}`];
+
+  } else {
+    // mofet — do NOT remove from mofetVisible; card stays with overlay
+    const cost = cardDef.costMilk ?? 0;
+    player = {
+      ...player,
+      milk: player.milk - cost,
+      mofets: [...player.mofets, cardInstance],
+      mofetUsedThisTurn: true,
+    };
     log = [...log, `${player.name} ביצע מופת: ${cardDef.name}`];
   }
 
-  const updatedPlayers = game.players.map((p, i) =>
-    i === playerIndex ? player : p
-  );
-
+  const updatedPlayers = game.players.map((p, i) => (i === playerIndex ? player : p));
   return { ...game, players: updatedPlayers, market, log };
 }
 
-export function playCard(player: PlayerState, instanceId: string): PlayerState {
-  const card = player.hand.find((c) => c.instanceId === instanceId);
-  if (!card) return player;
-  return {
-    ...player,
-    hand: player.hand.filter((c) => c.instanceId !== instanceId),
-    played: [...player.played, card],
-  };
-}
-
-export function placeInYard(player: PlayerState, instanceId: string): PlayerState {
-  const card = player.hand.find((c) => c.instanceId === instanceId);
-  if (!card) return player;
-  return {
-    ...player,
-    hand: player.hand.filter((c) => c.instanceId !== instanceId),
-    yard: [...player.yard, card],
-  };
-}
-
-export function discardFromHand(player: PlayerState, instanceId: string): PlayerState {
-  const card = player.hand.find((c) => c.instanceId === instanceId);
-  if (!card) return player;
-  return {
-    ...player,
-    hand: player.hand.filter((c) => c.instanceId !== instanceId),
-    discard: [...player.discard, card],
-  };
-}
-
-export function returnToHand(
-  player: PlayerState,
-  instanceId: string,
-  from: "played" | "yard" | "discard"
-): PlayerState {
-  let sourceArr: CardInstance[];
-  if (from === "played") sourceArr = player.played;
-  else if (from === "yard") sourceArr = player.yard;
-  else sourceArr = player.discard;
-
-  const card = sourceArr.find((c) => c.instanceId === instanceId);
-  if (!card) return player;
-
-  const filtered = sourceArr.filter((c) => c.instanceId !== instanceId);
-
-  if (from === "played") return { ...player, played: filtered, hand: [...player.hand, card] };
-  if (from === "yard") return { ...player, yard: filtered, hand: [...player.hand, card] };
-  return { ...player, discard: filtered, hand: [...player.hand, card] };
-}
-
-export function returnToDiscard(
-  player: PlayerState,
-  instanceId: string,
-  from: "yard" | "mofets"
-): PlayerState {
-  let sourceArr = from === "yard" ? player.yard : player.mofets;
-  const card = sourceArr.find((c) => c.instanceId === instanceId);
-  if (!card) return player;
-  const filtered = sourceArr.filter((c) => c.instanceId !== instanceId);
-  if (from === "yard") return { ...player, yard: filtered, discard: [...player.discard, card] };
-  return { ...player, mofets: filtered, discard: [...player.discard, card] };
-}
-
-export function buildMarket(allCards: CardDef[]): MarketState {
+export function buildMarket(allCards: CardDef[], playerCount: number): MarketState {
   const generalCards = allCards.filter((c) => c.source === "general_market");
   let generalInstances: CardInstance[] = [];
   let instIdx = 0;
@@ -250,25 +164,9 @@ export function buildMarket(allCards: CardDef[]): MarketState {
     }
   }
   mofetInstances = shuffle(mofetInstances);
-  const mofetVisible = mofetInstances.slice(0, 3);
-  const mofetDeck = mofetInstances.slice(3);
+  const mofetPoolSize = playerCount * 2 + 1;
+  const mofetVisible = mofetInstances.slice(0, mofetPoolSize);
+  const mofetDeck: CardInstance[] = [];
 
-  const factionIds = ["baba", "breslov", "chabad", "litvaks"] as const;
-  const factionDecks: Partial<Record<string, CardInstance[]>> = {};
-  const factionVisible: Partial<Record<string, CardInstance[]>> = {};
-  for (const factionId of factionIds) {
-    const cards = allCards.filter((c) => c.source === "faction_market" && c.faction === factionId);
-    let instances: CardInstance[] = [];
-    let fi = 0;
-    for (const card of cards) {
-      for (let i = 0; i < card.copies; i++) {
-        instances.push({ instanceId: makeInstanceId(`${factionId}-${card.id}`, fi++), defId: card.id });
-      }
-    }
-    instances = shuffle(instances);
-    factionVisible[factionId] = instances.slice(0, 5);
-    factionDecks[factionId] = instances.slice(5);
-  }
-
-  return { generalDeck, generalVisible, mofetDeck, mofetVisible, factionDecks, factionVisible };
+  return { generalDeck, generalVisible, mofetDeck, mofetVisible };
 }

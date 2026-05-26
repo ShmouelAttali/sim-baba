@@ -4,16 +4,39 @@
   font-family: 'Frank Ruhl Libre', serif;
 }
 
+html {
+  height: 100%;
+}
+
 body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
   font-family: 'Frank Ruhl Libre', serif;
   direction: rtl;
   text-align: right;
+}
+
+#root {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 /* Log scrollbar */
 .log-scroll {
   scrollbar-width: thin;
   scrollbar-color: #94a3b8 transparent;
+}
+
+/* Hide scrollbar visually while keeping scroll */
+.no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
 }
 
 /* Smooth counter transitions */

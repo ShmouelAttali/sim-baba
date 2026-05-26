@@ -13,7 +13,12 @@ import AppHeader from "./components/AppHeader";
 import CountersBar from "./components/CountersBar";
 import GameSetup from "./components/GameSetup";
 import PlayerBoard from "./components/PlayerBoard";
-import MarketBottom from "./components/MarketBottom";
+import YardSection from "./components/YardSection";
+import {
+  GeneralMarketSection,
+  FactionMarketSection,
+  MofetMarketSection,
+} from "./components/MarketBottom";
 
 type LoadState =
   | { status: "loading" }
@@ -33,6 +38,7 @@ export default function App() {
   const [reloadError, setReloadError] = useState<string | undefined>();
   const [endTurnFlash, setEndTurnFlash] = useState(false);
   const [isEndingTurn, setIsEndingTurn] = useState(false);
+  const [victory, setVictory] = useState<{ playerName: string; factionName: string; type: string; icon: string } | null>(null);
 
   const fetchData = useCallback(async () => {
     try {
@@ -111,6 +117,22 @@ export default function App() {
 
   const { cards: allCardDefs, factions } = loadState;
 
+  // ── Victory checks ────────────────────────────────────────────────────────
+
+  function checkTorahVictory(player: PlayerState): boolean {
+    const yardDefs = player.yard.map((c) => allCardDefs.find((d) => d.id === c.defId));
+    const lomdim = yardDefs.filter((d) => d?.tags?.includes("לומד")).length;
+    const mosadotLimud = yardDefs.filter((d) => d?.tags?.includes("מוסד לימוד")).length;
+    return lomdim >= 4 && mosadotLimud >= 2 && player.milk >= 25;
+  }
+
+  function checkMachineVictory(player: PlayerState): boolean {
+    const yardDefs = player.yard.map((c) => allCardDefs.find((d) => d.id === c.defId));
+    const anashim = yardDefs.filter((d) => d?.type === "person").length;
+    const mosadot = yardDefs.filter((d) => d?.type === "institution").length;
+    return anashim >= 3 && mosadot >= 2 && player.followers >= 30;
+  }
+
   // ── State helpers ─────────────────────────────────────────────────────────
 
   function pushHistory(state: GameState) {
@@ -185,7 +207,15 @@ export default function App() {
     setTimeout(() => {
       setIsEndingTurn(false);
       pushHistory(snapshot);
-      applyGameState(endTurn(snapshot));
+      const newGame = endTurn(snapshot);
+      applyGameState(newGame);
+      const nextPlayer = newGame.players[newGame.currentPlayerIndex];
+      const factionName = factions.find((f) => f.id === nextPlayer.factionId)?.name ?? "";
+      if (checkTorahVictory(nextPlayer)) {
+        setVictory({ playerName: nextPlayer.name, factionName, type: "עולם התורה", icon: "📚" });
+      } else if (checkMachineVictory(nextPlayer)) {
+        setVictory({ playerName: nextPlayer.name, factionName, type: "המכונה המשומנת", icon: "⚙️" });
+      }
     }, 180);
   }
 
@@ -215,7 +245,13 @@ export default function App() {
     if (!def) return;
     const playerId = game.players[game.currentPlayerIndex].id;
     pushHistory(game);
-    applyGameState(buyCard(game, playerId, instance, "mofet", def));
+    const newGame = buyCard(game, playerId, instance, "mofet", def);
+    applyGameState(newGame);
+    const updatedPlayer = newGame.players[newGame.currentPlayerIndex];
+    const factionName = factions.find((f) => f.id === updatedPlayer.factionId)?.name ?? "";
+    if (updatedPlayer.mofets.length >= 3) {
+      setVictory({ playerName: updatedPlayer.name, factionName, type: "בעל-מופת", icon: "🏆" });
+    }
   }
 
   function handleReturnFromYard(instanceId: string) {
@@ -252,7 +288,30 @@ export default function App() {
 
   // ── Game screen ───────────────────────────────────────────────────────────
   return (
-    <div className="overflow-hidden" style={{ height: "100vh", display: "grid", gridTemplateRows: "auto auto 1fr auto" }}>
+    <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+
+      {/* Victory modal */}
+      {victory && (
+        <div className="fixed inset-0 z-[100] bg-black/70 flex items-center justify-center p-4">
+          <div className="bg-stone-900 border-2 border-amber-400 rounded-2xl shadow-2xl p-8 max-w-sm w-full text-center space-y-4">
+            <div className="text-5xl">{victory.icon}</div>
+            <h2 className="text-2xl font-bold text-amber-300">{victory.type}</h2>
+            <p className="text-stone-300 text-lg">
+              <strong className="text-white">{victory.playerName}</strong>
+              {victory.factionName ? ` (${victory.factionName})` : ""}
+            </p>
+            <p className="text-stone-400 text-sm">ניצח!</p>
+            <button
+              onClick={() => setVictory(null)}
+              className="bg-amber-600 hover:bg-amber-500 text-white px-6 py-2.5 rounded-xl font-bold transition-colors"
+            >
+              המשך משחק
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Fixed header */}
       <AppHeader
         turnNumber={game.turnNumber}
         currentPlayerName={currentPlayer.name}
@@ -260,6 +319,7 @@ export default function App() {
         players={game.players}
         currentPlayerIndex={game.currentPlayerIndex}
         factions={factions}
+        allCardDefs={allCardDefs}
         onEndTurn={handleEndTurn}
         onSave={handleSave}
         onUndo={handleUndo}
@@ -271,6 +331,7 @@ export default function App() {
         debugJson={import.meta.env.DEV ? JSON.stringify(game, null, 2) : undefined}
       />
 
+      {/* Fixed counters bar */}
       <CountersBar
         player={currentPlayer}
         faction={currentFaction}
@@ -278,31 +339,76 @@ export default function App() {
         isEndingTurn={endTurnFlash}
       />
 
-      {/* Main area — grid 1fr row gives PlayerBoard a definite pixel height */}
-      <div className="overflow-hidden">
-        <PlayerBoard
-          player={currentPlayer}
-          allCardDefs={allCardDefs}
-          onUpdatePlayer={updateCurrentPlayer}
-          isEndingTurn={isEndingTurn}
-        />
+      {/* 3-row grid: [Hand | Yard] / [General | Faction] / [Mofet full-width] */}
+      <div
+        style={{
+          flex: 1,
+          minHeight: 0,
+          display: "grid",
+          gridTemplateColumns: "1fr 1fr",
+          gridTemplateRows: "minmax(278px, auto) auto auto",
+          overflow: "auto",
+        }}
+        className="no-scrollbar"
+      >
+        {/* Row 1 – Right: Hand zone */}
+        <div style={{ overflow: "hidden", borderLeft: "2px solid #e5e7eb", borderBottom: "1px solid #e5e7eb" }}>
+          <PlayerBoard
+            player={currentPlayer}
+            allCardDefs={allCardDefs}
+            onUpdatePlayer={updateCurrentPlayer}
+            isEndingTurn={isEndingTurn}
+          />
+        </div>
+
+        {/* Row 1 – Left: Yard zone */}
+        <div style={{ overflow: "hidden", borderBottom: "1px solid #e5e7eb" }}>
+          <YardSection
+            player={currentPlayer}
+            allCardDefs={allCardDefs}
+            factions={factions}
+            onReturnFromYard={handleReturnFromYard}
+          />
+        </div>
+
+        {/* Row 2 – Right: שוק כללי */}
+        <div style={{ overflow: "hidden", borderLeft: "2px solid #e5e7eb", borderBottom: "1px solid #e5e7eb" }}>
+          <GeneralMarketSection
+            market={game.market}
+            allCardDefs={allCardDefs}
+            currentPlayerMoney={currentPlayer.money}
+            currentPlayerMilk={currentPlayer.milk}
+            onBuyGeneral={handleBuyGeneral}
+          />
+        </div>
+
+        {/* Row 2 – Left: שוק פרטי */}
+        <div style={{ overflow: "hidden", borderBottom: "1px solid #e5e7eb" }}>
+          <FactionMarketSection
+            player={currentPlayer}
+            allCardDefs={allCardDefs}
+            factions={factions}
+            currentPlayerMoney={currentPlayer.money}
+            currentPlayerMilk={currentPlayer.milk}
+            onBuyFaction={handleBuyFaction}
+          />
+        </div>
+
+        {/* Row 3 – שוק מופתים: full width */}
+        <div style={{ gridColumn: "1 / 3", overflow: "hidden" }}>
+          <MofetMarketSection
+            market={game.market}
+            allCardDefs={allCardDefs}
+            players={game.players}
+            currentPlayerFaction={currentPlayer.factionId}
+            currentPlayerMoney={currentPlayer.money}
+            currentPlayerMilk={currentPlayer.milk}
+            mofetUsedThisTurn={currentPlayer.mofetUsedThisTurn}
+            onBuyMofet={handleBuyMofet}
+          />
+        </div>
+
       </div>
-
-      <MarketBottom
-        market={game.market}
-        allCardDefs={allCardDefs}
-        currentPlayerFaction={currentPlayer.factionId}
-        factions={factions}
-        currentPlayerMoney={currentPlayer.money}
-        currentPlayerMilk={currentPlayer.milk}
-        currentPlayerYard={currentPlayer.yard}
-        currentPlayerMofets={currentPlayer.mofets}
-        onBuyGeneral={handleBuyGeneral}
-        onBuyFaction={handleBuyFaction}
-        onBuyMofet={handleBuyMofet}
-        onReturnFromYard={handleReturnFromYard}
-      />
-
     </div>
   );
 }

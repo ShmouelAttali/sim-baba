@@ -35,7 +35,7 @@ export async function loadCards(): Promise<CardDef[]> {
         yardText: row[11]?.trim() || undefined,
         effectText: row[12]?.trim() || undefined,
         addsDanger: row[13]?.trim() ? parseInt(row[13]) : undefined,
-        notes: row[14]?.trim() || undefined,
+        tags: row[14]?.trim() ? row[14].split(',').map(t => t.trim()).filter(Boolean) : undefined,
       } as CardDef;
     })
     .filter((c): c is CardDef => c !== null);
@@ -58,13 +58,12 @@ export async function loadFactions(): Promise<FactionDef[]> {
       return {
         id,
         name: row[0].trim(),
-        startingInfrastructure: parseInt(row[1]) || 0,
-        startingFollowers: parseInt(row[2]) || 0,
-        startingMilk: parseInt(row[3]) || 0,
-        dangerName: row[4]?.trim() || "סכנה",
+        startingFollowers: parseInt(row[1]) || 0,
+        startingInfrastructure: parseInt(row[2]) || 0,
+        dangerName: row[3]?.trim() || "סכנה",
         abilityName: abilityNames[id] ?? "",
-        abilityText: row[5]?.trim() || "",
-        outburstText: row[6]?.trim() || "",
+        abilityText: row[4]?.trim() || "",
+        outburstText: row[5]?.trim() || "",
       } as FactionDef;
     });
 }

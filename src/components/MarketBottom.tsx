@@ -1,32 +1,23 @@
 import { useState } from "react";
-import type { CardDef, CardInstance, FactionDef, FactionId, MarketState } from "../types/game";
+import type { CardDef, CardInstance, FactionDef, FactionId, MarketState, PlayerState } from "../types/game";
 import CardView from "./CardView";
 
-interface Props {
-  market: MarketState;
-  allCardDefs: CardDef[];
-  currentPlayerFaction: FactionId;
-  factions: FactionDef[];
-  currentPlayerMoney: number;
-  currentPlayerMilk: number;
-  currentPlayerYard: CardInstance[];
-  currentPlayerMofets: CardInstance[];
-  onBuyGeneral: (instance: CardInstance) => void;
-  onBuyFaction: (instance: CardInstance) => void;
-  onBuyMofet: (instance: CardInstance) => void;
-  onReturnFromYard: (instanceId: string) => void;
-}
-
-const ROW_HEIGHT = 265;
-
-const FACTION_COLORS: Record<string, { bgClass: string; textClass: string; badgeClass: string; cardAreaClass: string }> = {
-  baba:    { bgClass: "border-yellow-200 bg-yellow-50",  textClass: "text-yellow-800",  badgeClass: "bg-yellow-100 text-yellow-700",  cardAreaClass: "bg-yellow-50/30"  },
-  breslov: { bgClass: "border-purple-100 bg-purple-50",  textClass: "text-purple-700",  badgeClass: "bg-purple-100 text-purple-600",  cardAreaClass: "bg-purple-50/30"  },
-  chabad:  { bgClass: "border-orange-100 bg-orange-50",  textClass: "text-orange-700",  badgeClass: "bg-orange-100 text-orange-600",  cardAreaClass: "bg-orange-50/30"  },
-  litvaks: { bgClass: "border-slate-200 bg-slate-50",    textClass: "text-slate-700",   badgeClass: "bg-slate-100 text-slate-600",   cardAreaClass: "bg-slate-50/30"   },
-};
 const CARD_W = 160;
 const CARD_H = 200;
+
+const FACTION_COLORS: Record<string, { bgClass: string; textClass: string; badgeClass: string }> = {
+  baba:    { bgClass: "bg-yellow-50 border-yellow-200",  textClass: "text-yellow-800",  badgeClass: "bg-yellow-100 text-yellow-700"  },
+  breslov: { bgClass: "bg-purple-50 border-purple-100",  textClass: "text-purple-700",  badgeClass: "bg-purple-100 text-purple-600"  },
+  chabad:  { bgClass: "bg-orange-50 border-orange-100",  textClass: "text-orange-700",  badgeClass: "bg-orange-100 text-orange-600"  },
+  litvaks: { bgClass: "bg-slate-50 border-slate-200",    textClass: "text-slate-700",   badgeClass: "bg-slate-100 text-slate-600"    },
+};
+
+const FACTION_TAKEN_COLORS: Record<string, string> = {
+  baba:    "bg-yellow-700/90 text-yellow-50",
+  breslov: "bg-purple-700/90 text-purple-50",
+  chabad:  "bg-orange-600/90 text-orange-50",
+  litvaks: "bg-slate-600/90 text-slate-50",
+};
 
 function EmptySlot() {
   return (
@@ -44,247 +35,260 @@ function SectionHeader({
   subtitle,
   count,
   countLabel,
-  bgClass,
-  textClass,
-  badgeClass,
+  className,
 }: {
   title: string;
   subtitle?: string;
   count?: number;
   countLabel?: string;
-  bgClass: string;
-  textClass: string;
-  badgeClass: string;
+  className?: string;
 }) {
   return (
-    <div className={`shrink-0 px-3 py-2 flex items-center justify-between border-b ${bgClass}`}>
+    <div className={`px-3 py-1 flex items-center justify-between border-b ${className ?? "bg-stone-50 border-stone-200"}`} style={{ minHeight: "32px" }}>
       <div className="flex items-baseline gap-1.5">
-        <span className={`text-xs font-semibold uppercase tracking-wide ${textClass}`}>{title}</span>
-        {subtitle && <span className={`text-[10px] opacity-60 ${textClass}`}>{subtitle}</span>}
+        {subtitle && <span className="text-[10px] text-stone-500">{subtitle}</span>}
       </div>
-      {count !== undefined && (
-        <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${badgeClass}`}>
-          {countLabel ? `${countLabel}: ${count}` : `${count}`}
-        </span>
-      )}
+      <div className="flex items-center gap-1.5">
+        <span className="text-xs font-semibold text-stone-700">{title}</span>
+        {count !== undefined && (
+          <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-stone-100 text-stone-600">
+            {countLabel ? `${countLabel}: ${count}` : count}
+          </span>
+        )}
+      </div>
     </div>
   );
 }
 
-export default function MarketBottom({
+// ── שוק כללי ─────────────────────────────────────────────────────────────────
+
+interface GeneralProps {
+  market: MarketState;
+  allCardDefs: CardDef[];
+  currentPlayerMoney: number;
+  currentPlayerMilk: number;
+  onBuyGeneral: (instance: CardInstance) => void;
+}
+
+export function GeneralMarketSection({
   market,
   allCardDefs,
-  currentPlayerFaction,
-  factions,
   currentPlayerMoney,
   currentPlayerMilk,
-  currentPlayerYard,
-  currentPlayerMofets,
   onBuyGeneral,
-  onBuyFaction,
-  onBuyMofet,
-  onReturnFromYard,
-}: Props) {
-  const [pulsingFactionId, setPulsingFactionId] = useState<string | null>(null);
-
-  function getDef(defId: string): CardDef | undefined {
+}: GeneralProps) {
+  function getDef(defId: string) {
     return allCardDefs.find((d) => d.id === defId);
   }
 
-  const currentFaction = factions.find((f) => f.id === currentPlayerFaction);
-  const factionColors = FACTION_COLORS[currentPlayerFaction] ?? { bgClass: "border-blue-100 bg-blue-50", textClass: "text-blue-700", badgeClass: "bg-blue-100 text-blue-600", cardAreaClass: "bg-blue-50/30" };
-  const factionVisibleCards = market.factionVisible[currentPlayerFaction] ?? [];
-  const factionDeckCount = market.factionDecks[currentPlayerFaction]?.length ?? 0;
-
-  function handleGeneralAction(_action: string, instanceId: string) {
+  function handleAction(_action: string, instanceId: string) {
     const inst = market.generalVisible.find((c) => c.instanceId === instanceId);
     if (inst) onBuyGeneral(inst);
   }
 
-  function handleFactionAction(_action: string, instanceId: string) {
-    const inst = factionVisibleCards.find((c) => c.instanceId === instanceId);
+  const emptySlots = Math.max(0, 5 - market.generalVisible.length);
+
+  return (
+    <div className="border-b border-stone-200">
+      <SectionHeader
+        title="שוק כללי"
+        count={market.generalDeck.length}
+        countLabel="נותרו"
+        className="bg-amber-50 border-amber-100"
+      />
+      <div className="flex items-start gap-2 p-2 overflow-x-auto no-scrollbar bg-amber-50/30" style={{ minHeight: "200px" }}>
+        {market.generalVisible.map((inst) => {
+          const def = getDef(inst.defId);
+          if (!def) return null;
+          return (
+            <CardView
+              key={inst.instanceId}
+              instance={inst}
+              def={def}
+              location="market-general"
+              playerMoney={currentPlayerMoney}
+              playerMilk={currentPlayerMilk}
+              onAction={handleAction}
+              compact={true}
+            />
+          );
+        })}
+        {Array.from({ length: emptySlots }).map((_, i) => (
+          <EmptySlot key={`gen-empty-${i}`} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ── שוק פרטי ─────────────────────────────────────────────────────────────────
+
+interface FactionProps {
+  player: PlayerState;
+  allCardDefs: CardDef[];
+  factions: FactionDef[];
+  currentPlayerMoney: number;
+  currentPlayerMilk: number;
+  onBuyFaction: (instance: CardInstance) => void;
+}
+
+export function FactionMarketSection({
+  player,
+  allCardDefs,
+  factions,
+  currentPlayerMoney,
+  currentPlayerMilk,
+  onBuyFaction,
+}: FactionProps) {
+  const [pulsingId, setPulsingId] = useState<string | null>(null);
+
+  const factionId = player.factionId as string;
+  const factionColors = FACTION_COLORS[factionId] ?? {
+    bgClass: "bg-blue-50 border-blue-100",
+    textClass: "text-blue-700",
+    badgeClass: "bg-blue-100 text-blue-600",
+  };
+  const factionName = factions.find((f) => f.id === player.factionId)?.name ?? "";
+
+  function getDef(defId: string) {
+    return allCardDefs.find((d) => d.id === defId);
+  }
+
+  function handleAction(_action: string, instanceId: string) {
+    const inst = player.factionMarketVisible.find((c) => c.instanceId === instanceId);
     if (!inst) return;
-    setPulsingFactionId(instanceId);
-    setTimeout(() => setPulsingFactionId(null), 260);
+    setPulsingId(instanceId);
+    setTimeout(() => setPulsingId(null), 260);
     onBuyFaction(inst);
   }
 
-  function handleMofetAction(_action: string, instanceId: string) {
+  const visible = player.factionMarketVisible ?? [];
+  const emptySlots = Math.max(0, 5 - visible.length);
+
+  return (
+    <div className="border-b border-stone-200">
+      <div className={`px-3 py-1 flex items-center justify-between border-b ${factionColors.bgClass}`} style={{ minHeight: "32px" }}>
+        <span className={`text-[10px] opacity-70 ${factionColors.textClass}`}>
+          נותרו: {player.factionMarketDeck?.length ?? 0}
+        </span>
+        <div className="flex items-center gap-1.5">
+          <span className={`text-xs font-semibold ${factionColors.textClass}`}>
+            {factionName} — שוק פרטי
+          </span>
+        </div>
+      </div>
+      <div className={`flex items-start gap-2 p-2 overflow-x-auto no-scrollbar`} style={{ minHeight: "200px" }}>
+        {visible.map((inst) => {
+          const def = getDef(inst.defId);
+          if (!def) return null;
+          return (
+            <CardView
+              key={inst.instanceId}
+              instance={inst}
+              def={def}
+              location="market-faction"
+              playerMoney={currentPlayerMoney}
+              playerMilk={currentPlayerMilk}
+              onAction={handleAction}
+              extraClass={pulsingId === inst.instanceId ? "card-buy-pulse" : ""}
+              compact={true}
+            />
+          );
+        })}
+        {Array.from({ length: emptySlots }).map((_, i) => (
+          <EmptySlot key={`fac-empty-${i}`} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ── שוק מופתים ────────────────────────────────────────────────────────────────
+
+interface MofetProps {
+  market: MarketState;
+  allCardDefs: CardDef[];
+  players: PlayerState[];
+  currentPlayerFaction: FactionId;
+  currentPlayerMoney: number;
+  currentPlayerMilk: number;
+  mofetUsedThisTurn: boolean;
+  onBuyMofet: (instance: CardInstance) => void;
+}
+
+export function MofetMarketSection({
+  market,
+  allCardDefs,
+  players,
+  currentPlayerMoney,
+  currentPlayerMilk,
+  mofetUsedThisTurn,
+  onBuyMofet,
+}: MofetProps) {
+  function getDef(defId: string) {
+    return allCardDefs.find((d) => d.id === defId);
+  }
+
+  function handleAction(_action: string, instanceId: string) {
     const inst = market.mofetVisible.find((c) => c.instanceId === instanceId);
     if (inst) onBuyMofet(inst);
   }
 
-  function handleYardAction(_action: string, instanceId: string) {
-    onReturnFromYard(instanceId);
+  // Build taken map from all players' mofets
+  const takenMofets = new Map<string, PlayerState>();
+  for (const player of players) {
+    for (const mofet of player.mofets) {
+      takenMofets.set(mofet.instanceId, player);
+    }
   }
 
-  const generalEmptySlots = Math.max(0, 5 - market.generalVisible.length);
-  const mofetEmptySlots   = Math.max(0, 3 - market.mofetVisible.length);
-
   return (
-    <div className="shrink-0 border-t-2 border-stone-300">
-      {/* ── Row 1: שוק כללי | החצר | מופתים שהושגו ─────────────────────── */}
-      <div className="flex border-b border-stone-200" style={{ height: `${ROW_HEIGHT}px` }}>
-
-        {/* Section 1 — שוק כללי (rightmost, fixed 856px) */}
-        <div className="flex flex-col border-l border-stone-200 overflow-hidden" style={{ width: "856px", flexShrink: 0 }}>
-          <SectionHeader
-            title="שוק כללי"
-            count={market.generalDeck.length}
-            countLabel="נותרו"
-            bgClass="border-amber-100 bg-amber-50"
-            textClass="text-amber-700"
-            badgeClass="bg-amber-100 text-amber-600"
-          />
-          <div className="flex-1 flex items-start gap-2 p-2 overflow-x-auto bg-amber-50/30">
-            {market.generalVisible.map((inst) => {
-              const def = getDef(inst.defId);
-              if (!def) return null;
-              return (
-                <CardView
-                  key={inst.instanceId}
-                  instance={inst}
-                  def={def}
-                  location="market-general"
-                  playerMoney={currentPlayerMoney}
-                  playerMilk={currentPlayerMilk}
-                  onAction={handleGeneralAction}
-                  compact={true}
-                />
-              );
-            })}
-            {Array.from({ length: generalEmptySlots }).map((_, i) => (
-              <EmptySlot key={`gen-empty-${i}`} />
-            ))}
-          </div>
-        </div>
-
-        <div className="w-px shrink-0 bg-stone-200" />
-
-        {/* Section 2 — החצר (middle, flex:2) */}
-        <div className="flex flex-col overflow-hidden border-l border-stone-200" style={{ flex: 2 }}>
-          <SectionHeader
-            title="החצר"
-            count={currentPlayerYard.length}
-            bgClass={factionColors.bgClass}
-            textClass={factionColors.textClass}
-            badgeClass={factionColors.badgeClass}
-          />
-          <div className={`flex-1 flex items-start gap-2 p-2 overflow-x-auto ${factionColors.cardAreaClass}`}>
-            {currentPlayerYard.length === 0 ? (
-              <div className="flex items-center justify-center w-full text-stone-300 text-sm">ריק</div>
-            ) : (
-              currentPlayerYard.map((inst) => {
-                const def = getDef(inst.defId);
-                if (!def) return null;
-                return (
-                  <CardView
-                    key={inst.instanceId}
-                    instance={inst}
-                    def={def}
-                    location="yard"
-                    onAction={handleYardAction}
-                    compact={true}
-                  />
-                );
-              })
-            )}
-          </div>
-        </div>
-
-        <div className="w-px shrink-0 bg-stone-200" />
-
-        {/* Section 3 — מופתים שהושגו (leftmost, flex:1) */}
-        <div className="flex flex-col overflow-hidden" style={{ flex: 1 }}>
-          <SectionHeader
-            title="🏆 מופתים"
-            count={currentPlayerMofets.length}
-            bgClass="border-yellow-200 bg-yellow-50"
-            textClass="text-yellow-800"
-            badgeClass="bg-yellow-100 text-yellow-700"
-          />
-          <div className="flex-1 flex items-start gap-2 p-2 overflow-x-auto bg-yellow-50/20">
-            {currentPlayerMofets.length === 0 ? (
-              <div className="flex items-center justify-center w-full text-stone-300 text-sm">אין עדיין</div>
-            ) : (
-              currentPlayerMofets.map((inst) => {
-                const def = getDef(inst.defId);
-                if (!def) return null;
-                return (
-                  <CardView
-                    key={inst.instanceId}
-                    instance={inst}
-                    def={def}
-                    location="mofets"
-                    compact={true}
-                  />
-                );
-              })
-            )}
-          </div>
-        </div>
-
-      </div>
-
-      {/* ── Row 2: שוק פרטי | שוק מופתים ──────────────────────────── */}
-      <div className="flex" style={{ height: `${ROW_HEIGHT}px` }}>
-        {/* שוק פרטי — right section */}
-        <div className="flex-1 flex flex-col border-l border-stone-200 overflow-hidden">
-          <SectionHeader
-            title="שוק פרטי"
-            subtitle={currentFaction?.name}
-            count={factionDeckCount}
-            countLabel="נותרו"
-            bgClass={factionColors.bgClass}
-            textClass={factionColors.textClass}
-            badgeClass={factionColors.badgeClass}
-          />
-          <div className={`flex-1 flex items-start gap-2 p-2 overflow-x-auto ${factionColors.cardAreaClass}`}>
-            {factionVisibleCards.length === 0 && factionDeckCount === 0 ? (
-              <div className="flex items-center justify-center w-full text-blue-300 text-sm">אין קלפים</div>
-            ) : (
-              <>
-                {factionVisibleCards.map((inst) => {
-                  const def = getDef(inst.defId);
-                  if (!def) return null;
-                  return (
-                    <CardView
-                      key={inst.instanceId}
-                      instance={inst}
-                      def={def}
-                      location="market-faction"
-                      playerMoney={currentPlayerMoney}
-                      playerMilk={currentPlayerMilk}
-                      onAction={handleFactionAction}
-                      extraClass={pulsingFactionId === inst.instanceId ? "card-buy-pulse" : ""}
-                      compact={true}
-                    />
-                  );
-                })}
-                {Array.from({ length: Math.max(0, 5 - factionVisibleCards.length) }).map((_, i) => (
-                  <EmptySlot key={`faction-empty-${i}`} />
-                ))}
-              </>
-            )}
-          </div>
-        </div>
-
-        <div className="w-px shrink-0 bg-stone-200" />
-
-        {/* שוק מופתים — left section */}
-        <div className="flex-1 flex flex-col overflow-hidden">
-          <SectionHeader
-            title="שוק מופתים"
-            count={market.mofetDeck.length}
-            countLabel="נותרו"
-            bgClass="border-purple-100 bg-purple-50"
-            textClass="text-purple-700"
-            badgeClass="bg-purple-100 text-purple-600"
-          />
-          <div className="flex-1 flex items-start gap-2 p-2 overflow-x-auto bg-purple-50/30">
+    <div>
+      <SectionHeader
+        title="מופתים"
+        count={market.mofetVisible.length}
+        countLabel="זמינים"
+        className="bg-purple-50 border-purple-100"
+      />
+      <div className="p-3">
+        {market.mofetVisible.length === 0 ? (
+          <div className="text-center text-stone-400 text-sm py-8">אין מופתים</div>
+        ) : (
+          <div className="flex flex-wrap gap-3">
             {market.mofetVisible.map((inst) => {
               const def = getDef(inst.defId);
               if (!def) return null;
+              const takenByPlayer = takenMofets.get(inst.instanceId);
+
+              if (takenByPlayer) {
+                return (
+                  <div key={inst.instanceId} className="relative shrink-0" style={{ width: `${CARD_W}px`, minHeight: `${CARD_H}px` }}>
+                    <CardView
+                      instance={inst}
+                      def={def}
+                      location="market-mofet"
+                      playerMoney={currentPlayerMoney}
+                      playerMilk={currentPlayerMilk}
+                      compact={true}
+                    />
+                    {/* Grey overlay */}
+                    <div
+                      className="absolute inset-0 rounded-xl"
+                      style={{ backgroundColor: "rgba(120,113,108,0.45)", filter: "grayscale(60%)" }}
+                    />
+                    {/* Taken banner */}
+                    <div
+                      className={`absolute inset-x-0 bottom-2 mx-1 rounded-lg px-2 py-1.5 text-center text-xs font-bold z-10 ${
+                        FACTION_TAKEN_COLORS[takenByPlayer.factionId] ?? "bg-stone-700 text-white"
+                      }`}
+                    >
+                      <div className="text-[10px] opacity-80">✓ נלקח על ידי:</div>
+                      <div>{takenByPlayer.name}</div>
+                    </div>
+                  </div>
+                );
+              }
+
               return (
                 <CardView
                   key={inst.instanceId}
@@ -293,16 +297,14 @@ export default function MarketBottom({
                   location="market-mofet"
                   playerMoney={currentPlayerMoney}
                   playerMilk={currentPlayerMilk}
-                  onAction={handleMofetAction}
+                  onAction={handleAction}
+                  mofetDisabled={mofetUsedThisTurn}
                   compact={true}
                 />
               );
             })}
-            {Array.from({ length: mofetEmptySlots }).map((_, i) => (
-              <EmptySlot key={`mofet-empty-${i}`} />
-            ))}
           </div>
-        </div>
+        )}
       </div>
     </div>
   );
