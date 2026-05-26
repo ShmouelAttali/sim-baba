@@ -1,6 +1,8 @@
 import { useState } from "react";
 import type { CardDef, CardInstance, PlayerState } from "../types/game";
 import { drawCards, shuffle } from "../utils/deck";
+import { applyCardEffects, buildEffectLogSuffix, shouldAutoApply } from "../utils/cardEffects";
+import type { ToastData } from "./Toast";
 import CardView from "./CardView";
 
 interface Props {
@@ -8,6 +10,7 @@ interface Props {
   allCardDefs: CardDef[];
   onUpdatePlayer: (updated: PlayerState, logMsgs?: string[]) => void;
   isEndingTurn?: boolean;
+  onToast?: (t: ToastData) => void;
 }
 
 export default function PlayerBoard({
@@ -15,6 +18,7 @@ export default function PlayerBoard({
   allCardDefs,
   onUpdatePlayer,
   isEndingTurn = false,
+  onToast,
 }: Props) {
   const [discardOpen, setDiscardOpen] = useState(false);
 
@@ -42,19 +46,52 @@ export default function PlayerBoard({
       case "play": {
         const card = player.hand.find((c) => c.instanceId === instanceId);
         if (!card) return;
-        onUpdatePlayer(
-          { ...player, hand: player.hand.filter((c) => c.instanceId !== instanceId), played: [...player.played, card] },
-          [`${player.name} שיחק: ${cardName}`]
-        );
+        const playedPlayer: PlayerState = {
+          ...player,
+          hand: player.hand.filter((c) => c.instanceId !== instanceId),
+          played: [...player.played, card],
+        };
+        if (def && shouldAutoApply(def)) {
+          const { updatedPlayer, effects, extraLogs } = applyCardEffects(playedPlayer, def, allCardDefs);
+          const needsManual = def.effectDisplay === "icons_text";
+          const suffix = buildEffectLogSuffix(effects);
+          const manualNote = needsManual ? " (+ אפקט ידני)" : "";
+          onUpdatePlayer(updatedPlayer, [
+            ...extraLogs,
+            `${player.name} שיחק: ${cardName}${suffix}${manualNote}`,
+          ]);
+          if (effects.length > 0) {
+            onToast?.({ cardName, effects, needsManual });
+          }
+        } else {
+          const manualNote =
+            def?.type === "trouble" || def?.effectDisplay === "text"
+              ? " — יש להחיל אפקט ידנית"
+              : "";
+          onUpdatePlayer(playedPlayer, [`${player.name} שיחק: ${cardName}${manualNote}`]);
+        }
         break;
       }
       case "yard": {
         const card = player.hand.find((c) => c.instanceId === instanceId);
         if (!card) return;
-        onUpdatePlayer(
-          { ...player, hand: player.hand.filter((c) => c.instanceId !== instanceId), yard: [...player.yard, card] },
-          [`${player.name} העמיד בחצר: ${cardName}`]
-        );
+        let yardedPlayer: PlayerState = {
+          ...player,
+          hand: player.hand.filter((c) => c.instanceId !== instanceId),
+          yard: [...player.yard, card],
+        };
+        if (def?.yardInfra) {
+          yardedPlayer = { ...yardedPlayer, infrastructure: yardedPlayer.infrastructure + def.yardInfra };
+          onUpdatePlayer(yardedPlayer, [`${player.name} העמיד בחצר: ${cardName}: 🏛️+${def.yardInfra}`]);
+          onToast?.({
+            cardName,
+            subtitle: "הועמד בחצר",
+            effects: [{ icon: "🏛️", label: "תשתית", delta: def.yardInfra }],
+            needsManual: false,
+          });
+        } else {
+          onUpdatePlayer(yardedPlayer, [`${player.name} העמיד בחצר: ${cardName}`]);
+        }
         break;
       }
       case "discard": {

@@ -77,47 +77,65 @@ interface Props {
 }
 
 export default function CountersBar({ player, faction, onUpdatePlayer, isEndingTurn }: Props) {
+  const [abilityExpanded, setAbilityExpanded] = useState(false);
   const p = player;
   const barColor = FACTION_BAR_BG[p.factionId] ?? "bg-stone-900 border-stone-700/30";
 
   return (
-    <div
-      className={`shrink-0 border-b ${barColor} px-6 py-2 flex items-start justify-center gap-5 flex-wrap overflow-x-auto ${
-        isEndingTurn ? "bar-flash" : ""
-      }`}
-    >
-      <CounterPill
-        icon="👥"
-        label="חסידים"
-        value={p.followers}
-        onChange={(v) => onUpdatePlayer({ ...p, followers: v })}
-      />
-      <CounterPill
-        icon="💰"
-        label="כסף"
-        value={p.money}
-        onChange={(v) => onUpdatePlayer({ ...p, money: v })}
-        subtitle="מתאפס בסוף תור"
-      />
-      <CounterPill
-        icon="🥛"
-        label='חל"ב'
-        value={p.milk}
-        onChange={(v) => onUpdatePlayer({ ...p, milk: v })}
-      />
-      <CounterPill
-        icon="🏛️"
-        label="תשתית"
-        value={p.infrastructure}
-        onChange={(v) => onUpdatePlayer({ ...p, infrastructure: v })}
-        subtitle="מגיעה רק מהחצר"
-      />
-      <CounterPill
-        icon="⚠️"
-        label={faction.dangerName}
-        value={p.danger}
-        onChange={(v) => onUpdatePlayer({ ...p, danger: v })}
-      />
+    <div className={`shrink-0 border-b ${barColor} ${isEndingTurn ? "bar-flash" : ""}`}>
+      {/* Counter pills row */}
+      <div className="px-6 py-2 flex items-start justify-center gap-5 flex-wrap overflow-x-auto">
+        <CounterPill
+          icon="👥"
+          label="חסידים"
+          value={p.followers}
+          onChange={(v) => onUpdatePlayer({ ...p, followers: v })}
+        />
+        <CounterPill
+          icon="💰"
+          label="כסף"
+          value={p.money}
+          onChange={(v) => onUpdatePlayer({ ...p, money: v })}
+          subtitle="מתאפס בסוף תור"
+        />
+        <CounterPill
+          icon="🥛"
+          label='חל"ב'
+          value={p.milk}
+          onChange={(v) => onUpdatePlayer({ ...p, milk: v })}
+        />
+        <CounterPill
+          icon="🏛️"
+          label="תשתית"
+          value={p.infrastructure}
+          onChange={(v) => onUpdatePlayer({ ...p, infrastructure: v })}
+          subtitle="מגיעה רק מהחצר"
+        />
+        <CounterPill
+          icon="⚠️"
+          label={faction.dangerName}
+          value={p.danger}
+          onChange={(v) => onUpdatePlayer({ ...p, danger: v })}
+        />
+      </div>
+
+      {/* Collapsible faction ability */}
+      <div className="px-6 pb-1.5">
+        <button
+          onClick={() => setAbilityExpanded((v) => !v)}
+          className="text-[11px] text-white/40 hover:text-white/60 transition-colors"
+        >
+          יכולת: {faction.abilityName ?? faction.abilityText.slice(0, 30)} {abilityExpanded ? "▲" : "▼"}
+        </button>
+        {abilityExpanded && (
+          <div className="mt-1 text-[11px] text-white/50 leading-relaxed space-y-0.5 max-w-2xl">
+            <div>{faction.abilityText}</div>
+            {faction.outburstText && (
+              <div><span className="text-white/35">התפרצות: </span>{faction.outburstText}</div>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

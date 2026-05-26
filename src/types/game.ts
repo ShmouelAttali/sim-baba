@@ -37,6 +37,14 @@ export interface CardDef {
   addsDanger?: number;
   notes?: string;
   tags?: string[];
+  gainMoney?: number;
+  gainFollowers?: number;
+  gainMilk?: number;
+  gainDanger?: number;
+  gainDraw?: number;
+  costMilkPlay?: number;
+  yardInfra?: number;
+  effectDisplay?: "icons" | "icons_text" | "text";
 }
 
 export interface CardInstance {

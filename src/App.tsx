@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import type { CardDef, CardInstance, FactionDef, GameState, PlayerState } from "./types/game";
 import { loadCards, loadFactions } from "./utils/loadSheetData";
 import {
@@ -9,6 +9,9 @@ import {
 } from "./utils/gameSetup";
 import type { SetupPlayer } from "./utils/gameSetup";
 import { buyCard, endTurn } from "./utils/deck";
+import { applyCardEffects, buildEffectLogSuffix } from "./utils/cardEffects";
+import { Toast } from "./components/Toast";
+import type { ToastData } from "./components/Toast";
 import AppHeader from "./components/AppHeader";
 import CountersBar from "./components/CountersBar";
 import GameSetup from "./components/GameSetup";
@@ -39,6 +42,9 @@ export default function App() {
   const [endTurnFlash, setEndTurnFlash] = useState(false);
   const [isEndingTurn, setIsEndingTurn] = useState(false);
   const [victory, setVictory] = useState<{ playerName: string; factionName: string; type: string; icon: string } | null>(null);
+  const [toast, setToast] = useState<ToastData | null>(null);
+  const dismissToast = useCallback(() => setToast(null), []);
+  const toastKeyRef = useRef(0);
 
   const fetchData = useCallback(async () => {
     try {
@@ -245,9 +251,34 @@ export default function App() {
     if (!def) return;
     const playerId = game.players[game.currentPlayerIndex].id;
     pushHistory(game);
-    const newGame = buyCard(game, playerId, instance, "mofet", def);
-    applyGameState(newGame);
-    const updatedPlayer = newGame.players[newGame.currentPlayerIndex];
+
+    // buyCard handles costMilk deduction + adding to mofets
+    const afterBuy = buyCard(game, playerId, instance, "mofet", def);
+    const playerIndex = afterBuy.players.findIndex((p) => p.id === playerId);
+    const boughtPlayer = afterBuy.players[playerIndex];
+
+    // Auto-apply gain fields (skipMilkCost: buyCard already deducted costMilk)
+    const { updatedPlayer, effects, extraLogs } = applyCardEffects(
+      boughtPlayer, def, allCardDefs, { skipMilkCost: true }
+    );
+    const suffix = buildEffectLogSuffix(effects);
+    const finalLog = [
+      ...afterBuy.log,
+      ...extraLogs,
+      ...(suffix ? [`${updatedPlayer.name} ביצע מופת: ${def.name}${suffix} (+ אפקט ידני)`] : []),
+    ];
+
+    const finalGame = {
+      ...afterBuy,
+      players: afterBuy.players.map((p, i) => (i === playerIndex ? updatedPlayer : p)),
+      log: suffix ? finalLog : afterBuy.log,
+    };
+    applyGameState(finalGame);
+
+    // Toast — mofets always show manual reminder
+    setToast({ cardName: def.name, effects, needsManual: true });
+    toastKeyRef.current += 1;
+
     const factionName = factions.find((f) => f.id === updatedPlayer.factionId)?.name ?? "";
     if (updatedPlayer.mofets.length >= 3) {
       setVictory({ playerName: updatedPlayer.name, factionName, type: "בעל-מופת", icon: "🏆" });
@@ -289,6 +320,8 @@ export default function App() {
   // ── Game screen ───────────────────────────────────────────────────────────
   return (
     <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+
+      <Toast key={toastKeyRef.current} toast={toast} onDismiss={dismissToast} />
 
       {/* Victory modal */}
       {victory && (
@@ -358,6 +391,7 @@ export default function App() {
             allCardDefs={allCardDefs}
             onUpdatePlayer={updateCurrentPlayer}
             isEndingTurn={isEndingTurn}
+            onToast={(t) => { toastKeyRef.current += 1; setToast(t); }}
           />
         </div>
 

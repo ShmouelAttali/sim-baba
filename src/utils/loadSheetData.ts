@@ -36,6 +36,14 @@ export async function loadCards(): Promise<CardDef[]> {
         effectText: row[12]?.trim() || undefined,
         addsDanger: row[13]?.trim() ? parseInt(row[13]) : undefined,
         tags: row[14]?.trim() ? row[14].split(',').map(t => t.trim()).filter(Boolean) : undefined,
+        gainMoney:     row[17]?.trim() ? parseInt(row[17]) : undefined,
+        gainFollowers: row[18]?.trim() ? parseInt(row[18]) : undefined,
+        gainMilk:      row[19]?.trim() ? parseInt(row[19]) : undefined,
+        gainDanger:    row[20]?.trim() ? parseInt(row[20]) : undefined,
+        gainDraw:      row[21]?.trim() ? parseInt(row[21]) : undefined,
+        costMilkPlay:  row[22]?.trim() ? parseInt(row[22]) : undefined,
+        yardInfra:     row[23]?.trim() ? parseInt(row[23]) : undefined,
+        effectDisplay: (row[24]?.trim() as CardDef["effectDisplay"]) || undefined,
       } as CardDef;
     })
     .filter((c): c is CardDef => c !== null);
@@ -82,6 +90,9 @@ function mapCardType(val: string): CardDef["type"] {
 }
 
 function mapFaction(val: string): CardDef["faction"] {
+  // Normalize Hebrew gershayim (U+05F4) and right double quotation mark (U+201D)
+  // to ASCII double quote so spreadsheet variants of 'חב"ד' all resolve correctly.
+  const normalized = val.replace(/[״“”]/g, '"');
   const map: Record<string, CardDef["faction"]> = {
     "באבא": "baba",
     'חב"ד': "chabad",
@@ -89,7 +100,7 @@ function mapFaction(val: string): CardDef["faction"] {
     "ליטאים": "litvaks",
     "כללי": "general",
   };
-  return map[val] ?? "general";
+  return map[normalized] ?? "general";
 }
 
 function mapSource(val: string): CardDef["source"] {
