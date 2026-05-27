@@ -229,6 +229,7 @@ export default function App() {
 
   function handleBuyGeneral(instance: CardInstance) {
     if (!game) return;
+    if (game.players[game.currentPlayerIndex].blockBuyAndMofetThisTurn) return;
     const def = allCardDefs.find((d) => d.id === instance.defId);
     if (!def) return;
     const playerId = game.players[game.currentPlayerIndex].id;
@@ -238,6 +239,7 @@ export default function App() {
 
   function handleBuyFaction(instance: CardInstance) {
     if (!game) return;
+    if (game.players[game.currentPlayerIndex].blockBuyAndMofetThisTurn) return;
     const def = allCardDefs.find((d) => d.id === instance.defId);
     if (!def) return;
     const playerId = game.players[game.currentPlayerIndex].id;
@@ -247,42 +249,75 @@ export default function App() {
 
   function handleBuyMofet(instance: CardInstance) {
     if (!game) return;
+    if (game.players[game.currentPlayerIndex].blockBuyAndMofetThisTurn) return;
     const def = allCardDefs.find((d) => d.id === instance.defId);
     if (!def) return;
     const playerId = game.players[game.currentPlayerIndex].id;
     pushHistory(game);
 
-    // buyCard handles costMilk deduction + adding to mofets
     const afterBuy = buyCard(game, playerId, instance, "mofet", def);
     const playerIndex = afterBuy.players.findIndex((p) => p.id === playerId);
     const boughtPlayer = afterBuy.players[playerIndex];
 
-    // Auto-apply gain fields (skipMilkCost: buyCard already deducted costMilk)
     const { updatedPlayer, effects, extraLogs } = applyCardEffects(
       boughtPlayer, def, allCardDefs, { skipMilkCost: true }
     );
     const suffix = buildEffectLogSuffix(effects);
-    const finalLog = [
-      ...afterBuy.log,
-      ...extraLogs,
-      ...(suffix ? [`${updatedPlayer.name} ביצע מופת: ${def.name}${suffix} (+ אפקט ידני)`] : []),
-    ];
+
+    // Draw curse card — place on top of player's deck
+    const newCurseDeck = [...afterBuy.market.curseDeck];
+    let playerWithCurse = updatedPlayer;
+    let curseCardName: string | undefined;
+    if (newCurseDeck.length > 0) {
+      const [curseCard, ...restCurse] = newCurseDeck;
+      newCurseDeck.splice(0, newCurseDeck.length, ...restCurse);
+      const curseDef = allCardDefs.find((d) => d.id === curseCard.defId);
+      curseCardName = curseDef?.name ?? curseCard.defId;
+      playerWithCurse = { ...playerWithCurse, deck: [curseCard, ...playerWithCurse.deck] };
+    }
+
+    const mofetLog = suffix
+      ? [`${playerWithCurse.name} ביצע מופת: ${def.name}${suffix} (+ אפקט ידני)`]
+      : [];
+    const curseLog = curseCardName
+      ? [`${playerWithCurse.name} קיבל קלף דינים: ${curseCardName}`]
+      : [];
 
     const finalGame = {
       ...afterBuy,
-      players: afterBuy.players.map((p, i) => (i === playerIndex ? updatedPlayer : p)),
-      log: suffix ? finalLog : afterBuy.log,
+      market: { ...afterBuy.market, curseDeck: newCurseDeck },
+      players: afterBuy.players.map((p, i) => (i === playerIndex ? playerWithCurse : p)),
+      log: [...afterBuy.log, ...extraLogs, ...mofetLog, ...curseLog],
     };
     applyGameState(finalGame);
 
-    // Toast — mofets always show manual reminder
-    setToast({ cardName: def.name, effects, needsManual: true });
     toastKeyRef.current += 1;
+    setToast({
+      cardName: def.name,
+      effects,
+      needsManual: true,
+      curseNote: curseCardName ? `💀 קלף דינים: ${curseCardName}` : undefined,
+    });
 
-    const factionName = factions.find((f) => f.id === updatedPlayer.factionId)?.name ?? "";
-    if (updatedPlayer.mofets.length >= 3) {
-      setVictory({ playerName: updatedPlayer.name, factionName, type: "בעל-מופת", icon: "🏆" });
+    const factionName = factions.find((f) => f.id === playerWithCurse.factionId)?.name ?? "";
+    if (playerWithCurse.mofets.length >= 3) {
+      setVictory({ playerName: playerWithCurse.name, factionName, type: "בעל-מופת", icon: "🏆" });
     }
+  }
+
+  function handleCurseCardDC006(updatedCurrentPlayer: PlayerState, followerGain: number, logs: string[]) {
+    if (!game) return;
+    const gainLogs = game.players
+      .filter((_, i) => i !== game.currentPlayerIndex)
+      .map((p) => `${p.name} קיבל ${followerGain} חסידים (שדות זרים)`);
+    applyWithHistory({
+      ...game,
+      players: game.players.map((p, i) => {
+        if (i === game.currentPlayerIndex) return updatedCurrentPlayer;
+        return { ...p, followers: p.followers + followerGain };
+      }),
+      log: [...game.log, ...logs, ...gainLogs],
+    });
   }
 
   function handleReturnFromYard(instanceId: string) {
@@ -392,6 +427,8 @@ export default function App() {
             onUpdatePlayer={updateCurrentPlayer}
             isEndingTurn={isEndingTurn}
             onToast={(t) => { toastKeyRef.current += 1; setToast(t); }}
+            playerCount={game.players.length}
+            onCurseCardDC006={handleCurseCardDC006}
           />
         </div>
 
@@ -413,6 +450,7 @@ export default function App() {
             currentPlayerMoney={currentPlayer.money}
             currentPlayerMilk={currentPlayer.milk}
             onBuyGeneral={handleBuyGeneral}
+            buyBlocked={currentPlayer.blockBuyAndMofetThisTurn}
           />
         </div>
 
@@ -425,6 +463,7 @@ export default function App() {
             currentPlayerMoney={currentPlayer.money}
             currentPlayerMilk={currentPlayer.milk}
             onBuyFaction={handleBuyFaction}
+            buyBlocked={currentPlayer.blockBuyAndMofetThisTurn}
           />
         </div>
 
@@ -439,6 +478,8 @@ export default function App() {
             currentPlayerMilk={currentPlayer.milk}
             mofetUsedThisTurn={currentPlayer.mofetUsedThisTurn}
             onBuyMofet={handleBuyMofet}
+            curseDeckCount={game.market.curseDeck.length}
+            buyAndMofetBlocked={currentPlayer.blockBuyAndMofetThisTurn}
           />
         </div>
 

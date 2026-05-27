@@ -6,6 +6,7 @@ export interface ToastData {
   subtitle?: string;
   effects: AppliedEffect[];
   needsManual: boolean;
+  curseNote?: string;
 }
 
 interface Props {
@@ -64,6 +65,11 @@ export function Toast({ toast, onDismiss }: Props) {
       {dangerWarning && (
         <div style={{ marginTop: "5px", color: "#f87171", fontWeight: 700, fontSize: "13px" }}>
           🚨 סכנה 6+ — הפעל התפרצות!
+        </div>
+      )}
+      {toast.curseNote && (
+        <div style={{ marginTop: "5px", color: "#fbbf24", fontSize: "12px" }}>
+          {toast.curseNote}
         </div>
       )}
     </div>

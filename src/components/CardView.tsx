@@ -12,6 +12,8 @@ interface Props {
   compact?: boolean;
   mofetDisabled?: boolean;
   isPlayed?: boolean;
+  invertEffects?: boolean;
+  buyAndMofetBlocked?: boolean;
 }
 
 const TYPE_LABELS: Record<string, string> = {
@@ -247,9 +249,12 @@ export default function CardView({
   compact = false,
   mofetDisabled = false,
   isPlayed = false,
+  invertEffects = false,
+  buyAndMofetBlocked = false,
 }: Props) {
   const isTrouble     = def.type === "trouble";
   const isMofet       = def.type === "mofet";
+  const isCurse       = def.source === "curse_deck";
   const inHandTrouble = isTrouble && location === "hand";
   const isMarket      = location === "market-general" || location === "market-faction" || location === "market-mofet";
   const isMofetMarket = location === "market-mofet";
@@ -289,10 +294,19 @@ export default function CardView({
             >
               שחק
             </button>
-            {def.yardText && (
+            {def.yardText && !invertEffects && !isCurse && (
               <button
                 onClick={() => onAction("yard", instance.instanceId)}
                 className="bg-emerald-600 hover:bg-emerald-500 text-white px-1.5 py-1 rounded transition-colors text-xs"
+              >
+                העמד בחצר
+              </button>
+            )}
+            {def.yardText && invertEffects && !isCurse && (
+              <button
+                disabled
+                title="הינדיק — לא ניתן להעמיד בחצר התור הזה"
+                className="bg-stone-300 text-stone-400 px-1.5 py-1 rounded text-xs cursor-not-allowed"
               >
                 העמד בחצר
               </button>
@@ -317,7 +331,15 @@ export default function CardView({
         </>
       )}
       {isMarket && (
-        isMofetMarket && mofetDisabled ? (
+        buyAndMofetBlocked ? (
+          <button
+            disabled
+            title="נועלים את החנויות — לא ניתן לקנות או לבצע מופת התור הזה"
+            className="px-1.5 py-1 rounded text-stone-400 bg-stone-600 cursor-not-allowed leading-none text-xs"
+          >
+            חנויות נעולות
+          </button>
+        ) : isMofetMarket && mofetDisabled ? (
           <button
             disabled
             title="כבר ביצעת מופת בתור זה"
@@ -400,6 +422,11 @@ export default function CardView({
           <span className="text-white px-1 py-0.5 rounded leading-none" style={{ fontSize: "11px", backgroundColor: badgeBg }}>
             {TYPE_LABELS[def.type]}
           </span>
+          {isCurse && (
+            <span style={{ backgroundColor: "#3b0764", color: "#e9d5ff", fontSize: "10px", padding: "2px 5px", borderRadius: "9999px", fontWeight: 600 }}>
+              💀 דינים
+            </span>
+          )}
           {tagPill && (
             <span style={{ backgroundColor: tagPill.bg, color: tagPill.text, fontSize: "10px", padding: "2px 6px", borderRadius: "9999px" }}>
               {tagPill.label}
@@ -466,6 +493,11 @@ export default function CardView({
         <span className="text-white text-[9px] px-1 py-0.5 rounded leading-none" style={{ backgroundColor: badgeBg }}>
           {TYPE_LABELS[def.type]}
         </span>
+        {isCurse && (
+          <span style={{ backgroundColor: "#3b0764", color: "#e9d5ff", fontSize: "9px", padding: "2px 5px", borderRadius: "9999px", fontWeight: 600 }}>
+            💀 דינים
+          </span>
+        )}
         <span className="bg-stone-100 text-stone-500 text-[9px] px-1 py-0.5 rounded leading-none">
           {FACTION_LABELS[def.faction]}
         </span>

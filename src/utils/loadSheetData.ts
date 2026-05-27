@@ -109,6 +109,7 @@ function mapSource(val: string): CardDef["source"] {
     "שוק כללי": "general_market",
     "מאגר חצר פרטי": "faction_market",
     "שוק מופתים": "mofet_market",
+    "חפיסת דינים": "curse_deck",
     "קלף עזר": "helper",
   };
   return map[val] ?? "helper";

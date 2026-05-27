@@ -68,6 +68,7 @@ interface GeneralProps {
   currentPlayerMoney: number;
   currentPlayerMilk: number;
   onBuyGeneral: (instance: CardInstance) => void;
+  buyBlocked?: boolean;
 }
 
 export function GeneralMarketSection({
@@ -76,6 +77,7 @@ export function GeneralMarketSection({
   currentPlayerMoney,
   currentPlayerMilk,
   onBuyGeneral,
+  buyBlocked = false,
 }: GeneralProps) {
   function getDef(defId: string) {
     return allCardDefs.find((d) => d.id === defId);
@@ -110,6 +112,7 @@ export function GeneralMarketSection({
               playerMilk={currentPlayerMilk}
               onAction={handleAction}
               compact={true}
+              buyAndMofetBlocked={buyBlocked}
             />
           );
         })}
@@ -130,6 +133,7 @@ interface FactionProps {
   currentPlayerMoney: number;
   currentPlayerMilk: number;
   onBuyFaction: (instance: CardInstance) => void;
+  buyBlocked?: boolean;
 }
 
 export function FactionMarketSection({
@@ -139,6 +143,7 @@ export function FactionMarketSection({
   currentPlayerMoney,
   currentPlayerMilk,
   onBuyFaction,
+  buyBlocked = false,
 }: FactionProps) {
   const [pulsingId, setPulsingId] = useState<string | null>(null);
 
@@ -192,6 +197,7 @@ export function FactionMarketSection({
               onAction={handleAction}
               extraClass={pulsingId === inst.instanceId ? "card-buy-pulse" : ""}
               compact={true}
+              buyAndMofetBlocked={buyBlocked}
             />
           );
         })}
@@ -214,6 +220,8 @@ interface MofetProps {
   currentPlayerMilk: number;
   mofetUsedThisTurn: boolean;
   onBuyMofet: (instance: CardInstance) => void;
+  curseDeckCount?: number;
+  buyAndMofetBlocked?: boolean;
 }
 
 export function MofetMarketSection({
@@ -224,6 +232,8 @@ export function MofetMarketSection({
   currentPlayerMilk,
   mofetUsedThisTurn,
   onBuyMofet,
+  curseDeckCount,
+  buyAndMofetBlocked = false,
 }: MofetProps) {
   function getDef(defId: string) {
     return allCardDefs.find((d) => d.id === defId);
@@ -244,12 +254,21 @@ export function MofetMarketSection({
 
   return (
     <div>
-      <SectionHeader
-        title="מופתים"
-        count={market.mofetVisible.length}
-        countLabel="זמינים"
-        className="bg-purple-50 border-purple-100"
-      />
+      <div className="px-3 py-1 flex items-center justify-between border-b bg-purple-50 border-purple-100" style={{ minHeight: "32px" }}>
+        <div className="flex items-center gap-2">
+          {curseDeckCount !== undefined && (
+            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-purple-900 text-purple-200 font-semibold">
+              💀 דינים: {curseDeckCount}
+            </span>
+          )}
+        </div>
+        <div className="flex items-center gap-1.5">
+          <span className="text-xs font-semibold text-stone-700">מופתים</span>
+          <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-stone-100 text-stone-600">
+            זמינים: {market.mofetVisible.length}
+          </span>
+        </div>
+      </div>
       <div className="p-3">
         {market.mofetVisible.length === 0 ? (
           <div className="text-center text-stone-400 text-sm py-8">אין מופתים</div>
@@ -299,6 +318,7 @@ export function MofetMarketSection({
                   playerMilk={currentPlayerMilk}
                   onAction={handleAction}
                   mofetDisabled={mofetUsedThisTurn}
+                  buyAndMofetBlocked={buyAndMofetBlocked}
                   compact={true}
                 />
               );

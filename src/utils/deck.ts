@@ -54,12 +54,26 @@ export function discardHandAndPlayed(player: PlayerState): PlayerState {
 export function endTurn(game: GameState): GameState {
   const currentPlayer = game.players[game.currentPlayerIndex];
   const afterDiscard = discardHandAndPlayed(currentPlayer);
-  const afterMoney = { ...afterDiscard, money: 0, mofetUsedThisTurn: false };
+  const afterReset: PlayerState = {
+    ...afterDiscard,
+    money: 0,
+    mofetUsedThisTurn: false,
+    invertEffectsThisTurn: false,
+    blockBuyAndMofetThisTurn: false,
+  };
 
-  const { player: afterDraw, log: newLog } = drawCards(afterMoney, 5, [
-    ...game.log,
-    `סיים תור — ${currentPlayer.name}. כסף אופס.`,
-  ]);
+  const baseLog = [...game.log, `סיים תור — ${currentPlayer.name}. כסף אופס.`];
+
+  let afterDraw: PlayerState;
+  let newLog: string[];
+  if (afterReset.skipDrawThisTurn) {
+    afterDraw = { ...afterReset, skipDrawThisTurn: false };
+    newLog = [...baseLog, `${currentPlayer.name} — היינו כחולמים: שומר יד לתור הבא`];
+  } else {
+    const result = drawCards(afterReset, 5, baseLog);
+    afterDraw = result.player;
+    newLog = result.log;
+  }
 
   const nextIndex = (game.currentPlayerIndex + 1) % game.players.length;
   const updatedPlayers = game.players.map((p, i) =>
@@ -168,5 +182,15 @@ export function buildMarket(allCards: CardDef[], playerCount: number): MarketSta
   const mofetVisible = mofetInstances.slice(0, mofetPoolSize);
   const mofetDeck: CardInstance[] = [];
 
-  return { generalDeck, generalVisible, mofetDeck, mofetVisible };
+  const curseCards = allCards.filter((c) => c.source === "curse_deck");
+  let curseInstances: CardInstance[] = [];
+  instIdx = 0;
+  for (const card of curseCards) {
+    for (let i = 0; i < card.copies; i++) {
+      curseInstances.push({ instanceId: makeInstanceId(`curse-${card.id}`, instIdx++), defId: card.id });
+    }
+  }
+  const curseDeck = shuffle(curseInstances);
+
+  return { generalDeck, generalVisible, mofetDeck, mofetVisible, curseDeck };
 }

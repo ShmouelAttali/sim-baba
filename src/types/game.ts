@@ -19,6 +19,7 @@ export type CardSource =
   | "general_market"
   | "faction_market"
   | "mofet_market"
+  | "curse_deck"
   | "helper";
 
 export interface CardDef {
@@ -69,6 +70,9 @@ export interface PlayerState {
   infrastructure: number;
   danger: number;
   mofetUsedThisTurn: boolean;
+  invertEffectsThisTurn: boolean;
+  skipDrawThisTurn: boolean;
+  blockBuyAndMofetThisTurn: boolean;
   nextDrawOrder: number;
   factionMarketDeck: CardInstance[];
   factionMarketVisible: CardInstance[];
@@ -79,6 +83,7 @@ export interface MarketState {
   generalVisible: CardInstance[];
   mofetDeck: CardInstance[];
   mofetVisible: CardInstance[];
+  curseDeck: CardInstance[];
 }
 
 export interface FactionDef {

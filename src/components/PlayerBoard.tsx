@@ -1,7 +1,7 @@
 import { useState } from "react";
 import type { CardDef, CardInstance, PlayerState } from "../types/game";
 import { drawCards, shuffle } from "../utils/deck";
-import { applyCardEffects, buildEffectLogSuffix, shouldAutoApply } from "../utils/cardEffects";
+import { applyCardEffects, applyCurseCardEffect, buildEffectLogSuffix, shouldAutoApply } from "../utils/cardEffects";
 import type { ToastData } from "./Toast";
 import CardView from "./CardView";
 
@@ -11,6 +11,8 @@ interface Props {
   onUpdatePlayer: (updated: PlayerState, logMsgs?: string[]) => void;
   isEndingTurn?: boolean;
   onToast?: (t: ToastData) => void;
+  playerCount?: number;
+  onCurseCardDC006?: (updatedCurrentPlayer: PlayerState, followerGain: number, logs: string[]) => void;
 }
 
 export default function PlayerBoard({
@@ -19,6 +21,8 @@ export default function PlayerBoard({
   onUpdatePlayer,
   isEndingTurn = false,
   onToast,
+  playerCount = 1,
+  onCurseCardDC006,
 }: Props) {
   const [discardOpen, setDiscardOpen] = useState(false);
 
@@ -51,6 +55,27 @@ export default function PlayerBoard({
           hand: player.hand.filter((c) => c.instanceId !== instanceId),
           played: [...player.played, card],
         };
+
+        // Curse card — special handling per card ID
+        if (def?.source === "curse_deck") {
+          const otherCount = Math.max(0, playerCount - 1);
+          const result = applyCurseCardEffect(playedPlayer, def, otherCount);
+          const suffix = buildEffectLogSuffix(result.effects);
+          const logs = [
+            ...result.extraLogs,
+            `${player.name} שיחק קלף דינים: ${cardName}${suffix}`,
+          ];
+          if (result.otherPlayersFollowerGain !== undefined && onCurseCardDC006) {
+            onCurseCardDC006(result.updatedPlayer, result.otherPlayersFollowerGain, logs);
+          } else {
+            onUpdatePlayer(result.updatedPlayer, logs);
+          }
+          if (result.effects.length > 0) {
+            onToast?.({ cardName, effects: result.effects, needsManual: result.extraLogs.some(l => l.includes("ידנית")) });
+          }
+          break;
+        }
+
         if (def && shouldAutoApply(def)) {
           const { updatedPlayer, effects, extraLogs } = applyCardEffects(playedPlayer, def, allCardDefs);
           const needsManual = def.effectDisplay === "icons_text";
@@ -213,6 +238,7 @@ export default function PlayerBoard({
                 onAction={handleCardAction}
                 compact={true}
                 isPlayed={isPlayed}
+                invertEffects={player.invertEffectsThisTurn}
               />
             );
           })
