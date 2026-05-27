@@ -98,6 +98,73 @@ body {
   animation: bar-flash 350ms ease;
 }
 
+/* ── Legend popover ──────────────────────────────────────── */
+
+@keyframes modal-backdrop-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes modal-panel-in {
+  from { opacity: 0; transform: scale(0.93) translateY(12px); }
+  to   { opacity: 1; transform: scale(1)    translateY(0);    }
+}
+.modal-backdrop-in {
+  animation: modal-backdrop-in 180ms ease-out forwards;
+}
+.modal-panel-in {
+  animation: modal-panel-in 200ms cubic-bezier(0.34, 1.2, 0.64, 1) forwards;
+}
+
+/* ── Rules markdown content ──────────────────────────────── */
+
+.rules-content {
+  font-size: 14px;
+  line-height: 1.7;
+  color: #d1d5db;
+}
+.rules-content h1 {
+  font-size: 20px;
+  font-weight: 700;
+  margin-bottom: 16px;
+  color: #f9fafb;
+}
+.rules-content h2 {
+  font-size: 15px;
+  font-weight: 700;
+  margin-top: 24px;
+  margin-bottom: 8px;
+  color: #fbbf24;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  padding-bottom: 4px;
+}
+.rules-content h3 {
+  font-size: 13px;
+  font-weight: 600;
+  margin-top: 16px;
+  margin-bottom: 6px;
+  color: #e5e7eb;
+}
+.rules-content ul,
+.rules-content ol {
+  padding-right: 18px;
+  margin-bottom: 10px;
+}
+.rules-content li {
+  margin-bottom: 5px;
+}
+.rules-content strong {
+  font-weight: 700;
+  color: #f3f4f6;
+}
+.rules-content hr {
+  border: none;
+  border-top: 1px solid rgba(255,255,255,0.08);
+  margin: 18px 0;
+}
+.rules-content p {
+  margin-bottom: 8px;
+}
+
 /* ── Trouble card pulse ───────────────────────────────────── */
 
 @keyframes danger-pulse {
