@@ -53,6 +53,7 @@ body {
 .card-hover:hover {
   transform: translateY(-2px);
   box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+  filter: brightness(1.05);
 }
 
 /* ── Card animations ─────────────────────────────────────── */
@@ -165,11 +166,41 @@ body {
   margin-bottom: 8px;
 }
 
+/* ── Hand zone — scrollbar ───────────────────────────────────── */
+
+.hand-zone {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0,0,0,0.35) rgba(0,0,0,0.08);
+}
+.hand-zone::-webkit-scrollbar { height: 8px; }
+.hand-zone::-webkit-scrollbar-track { background: rgba(0,0,0,0.08); border-radius: 9999px; }
+.hand-zone::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.35); border-radius: 9999px; }
+.hand-zone::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,0.55); }
+
+/* Each card slot: shows 5 full cards + half-peek of 6th */
+.hand-card-slot {
+  flex: 0 0 calc((100% - 12px * 5) / 5.5);
+  min-width: 0;
+  aspect-ratio: 2/3;
+  align-self: center;
+}
+
+/* ── Yard zone — scrollbar ───────────────────────────────────── */
+
+.yard-zone-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0,0,0,0.35) rgba(0,0,0,0.08);
+}
+.yard-zone-scroll::-webkit-scrollbar { width: 8px; }
+.yard-zone-scroll::-webkit-scrollbar-track { background: rgba(0,0,0,0.08); border-radius: 9999px; }
+.yard-zone-scroll::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.35); border-radius: 9999px; }
+.yard-zone-scroll::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,0.55); }
+
 /* ── Trouble card pulse ───────────────────────────────────── */
 
 @keyframes danger-pulse {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
-  50%       { box-shadow: 0 0 0 6px rgba(239, 68, 68, 0.4); }
+  0%, 100% { box-shadow: 0 0 0 2px #ef4444, 0 4px 16px rgba(239,68,68,0.3); }
+  50%       { box-shadow: 0 0 0 4px #ef4444, 0 4px 20px rgba(239,68,68,0.5); }
 }
 .danger-pulse {
   animation: danger-pulse 2s ease-in-out infinite;

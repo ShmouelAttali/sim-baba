@@ -1,27 +1,18 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import type { CardDef, CardInstance, FactionDef, GameState, PlayerState } from "./types/game";
 import { loadCards, loadFactions } from "./utils/loadSheetData";
-import {
-  createNewGame,
-  loadGame,
-  saveGame,
-  clearSave,
-} from "./utils/gameSetup";
+import { createNewGame, loadGame, saveGame, clearSave } from "./utils/gameSetup";
 import type { SetupPlayer } from "./utils/gameSetup";
 import { buyCard, endTurn } from "./utils/deck";
 import { applyCardEffects, buildEffectLogSuffix } from "./utils/cardEffects";
 import { Toast } from "./components/Toast";
 import type { ToastData } from "./components/Toast";
-import AppHeader from "./components/AppHeader";
 import CountersBar from "./components/CountersBar";
 import GameSetup from "./components/GameSetup";
 import PlayerBoard from "./components/PlayerBoard";
 import YardSection from "./components/YardSection";
-import {
-  GeneralMarketSection,
-  FactionMarketSection,
-  MofetMarketSection,
-} from "./components/MarketBottom";
+import MofetSection from "./components/MofetSection";
+import MarketModal from "./components/MarketModal";
 
 type LoadState =
   | { status: "loading" }
@@ -43,6 +34,7 @@ export default function App() {
   const [isEndingTurn, setIsEndingTurn] = useState(false);
   const [victory, setVictory] = useState<{ playerName: string; factionName: string; type: string; icon: string } | null>(null);
   const [toast, setToast] = useState<ToastData | null>(null);
+  const [marketOpen, setMarketOpen] = useState(false);
   const dismissToast = useCallback(() => setToast(null), []);
   const toastKeyRef = useRef(0);
 
@@ -57,18 +49,14 @@ export default function App() {
     }
   }, []);
 
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+  useEffect(() => { fetchData(); }, [fetchData]);
 
   async function handleReloadCards() {
     setReloadState("loading");
     setReloadError(undefined);
     try {
       const [cards, factions] = await Promise.all([loadCards(), loadFactions()]);
-      setLoadState((prev) =>
-        prev.status === "ready" ? { ...prev, cards, factions } : prev
-      );
+      setLoadState((prev) => prev.status === "ready" ? { ...prev, cards, factions } : prev);
       setReloadState("success");
       setTimeout(() => setReloadState("idle"), 2000);
     } catch (err) {
@@ -79,7 +67,6 @@ export default function App() {
     }
   }
 
-  // ── Loading / error screens ───────────────────────────────────────────────
   if (loadState.status === "loading") {
     return (
       <div className="min-h-screen bg-stone-100 flex items-center justify-center">
@@ -97,33 +84,18 @@ export default function App() {
         <div className="bg-white rounded-2xl shadow-xl p-8 max-w-lg w-full text-center space-y-4">
           <div className="text-4xl">⚠️</div>
           <h2 className="text-2xl font-bold text-red-700">שגיאה בטעינת קלפים</h2>
-          <p className="text-stone-600">
-            לא ניתן לטעון את הקלפים מ-Google Sheets.
-            <br />
-            ודא שה-Sheet מפורסם כ-CSV ושכתובת ה-URL נכונה.
-          </p>
+          <p className="text-stone-600">לא ניתן לטעון את הקלפים מ-Google Sheets.<br />ודא שה-Sheet מפורסם כ-CSV ושכתובת ה-URL נכונה.</p>
           <details className="text-right">
-            <summary className="cursor-pointer text-stone-500 text-sm hover:text-stone-700">
-              פרטים טכניים
-            </summary>
-            <pre className="mt-2 p-3 bg-stone-50 border border-stone-200 rounded text-xs text-stone-700 text-left overflow-auto max-h-32" dir="ltr">
-              {loadState.message}
-            </pre>
+            <summary className="cursor-pointer text-stone-500 text-sm hover:text-stone-700">פרטים טכניים</summary>
+            <pre className="mt-2 p-3 bg-stone-50 border border-stone-200 rounded text-xs text-stone-700 text-left overflow-auto max-h-32" dir="ltr">{loadState.message}</pre>
           </details>
-          <button
-            onClick={fetchData}
-            className="bg-stone-800 hover:bg-stone-700 text-white px-6 py-3 rounded-xl font-bold transition-colors"
-          >
-            נסה שוב
-          </button>
+          <button onClick={fetchData} className="bg-stone-800 hover:bg-stone-700 text-white px-6 py-3 rounded-xl font-bold transition-colors">נסה שוב</button>
         </div>
       </div>
     );
   }
 
   const { cards: allCardDefs, factions } = loadState;
-
-  // ── Victory checks ────────────────────────────────────────────────────────
 
   function checkTorahVictory(player: PlayerState): boolean {
     const yardDefs = player.yard.map((c) => allCardDefs.find((d) => d.id === c.defId));
@@ -138,8 +110,6 @@ export default function App() {
     const mosadot = yardDefs.filter((d) => d?.type === "institution").length;
     return anashim >= 3 && mosadot >= 2 && player.followers >= 30;
   }
-
-  // ── State helpers ─────────────────────────────────────────────────────────
 
   function pushHistory(state: GameState) {
     setHistory((prev) => [...prev.slice(-(MAX_HISTORY - 1)), state]);
@@ -160,14 +130,10 @@ export default function App() {
     const newLog = logMsgs ? [...game.log, ...logMsgs] : game.log;
     applyWithHistory({
       ...game,
-      players: game.players.map((p, i) =>
-        i === game.currentPlayerIndex ? updated : p
-      ),
+      players: game.players.map((p, i) => i === game.currentPlayerIndex ? updated : p),
       log: newLog,
     });
   }
-
-  // ── Game setup handlers ───────────────────────────────────────────────────
 
   function handleStart(players: SetupPlayer[]) {
     const newGame = createNewGame(players, allCardDefs, factions);
@@ -178,10 +144,7 @@ export default function App() {
 
   function handleContinue() {
     const saved = loadGame();
-    if (saved) {
-      setGame(saved);
-      setHasSavedGame(true);
-    }
+    if (saved) { setGame(saved); setHasSavedGame(true); }
   }
 
   function handleUndo() {
@@ -225,8 +188,6 @@ export default function App() {
     }, 180);
   }
 
-  // ── Market handlers ───────────────────────────────────────────────────────
-
   function handleBuyGeneral(instance: CardInstance) {
     if (!game) return;
     if (game.players[game.currentPlayerIndex].blockBuyAndMofetThisTurn) return;
@@ -259,12 +220,9 @@ export default function App() {
     const playerIndex = afterBuy.players.findIndex((p) => p.id === playerId);
     const boughtPlayer = afterBuy.players[playerIndex];
 
-    const { updatedPlayer, effects, extraLogs } = applyCardEffects(
-      boughtPlayer, def, allCardDefs, { skipMilkCost: true }
-    );
+    const { updatedPlayer, effects, extraLogs } = applyCardEffects(boughtPlayer, def, allCardDefs, { skipMilkCost: true });
     const suffix = buildEffectLogSuffix(effects);
 
-    // Draw curse card — place on top of player's deck
     const newCurseDeck = [...afterBuy.market.curseDeck];
     let playerWithCurse = updatedPlayer;
     let curseCardName: string | undefined;
@@ -276,12 +234,8 @@ export default function App() {
       playerWithCurse = { ...playerWithCurse, deck: [curseCard, ...playerWithCurse.deck] };
     }
 
-    const mofetLog = suffix
-      ? [`${playerWithCurse.name} ביצע מופת: ${def.name}${suffix} (+ אפקט ידני)`]
-      : [];
-    const curseLog = curseCardName
-      ? [`${playerWithCurse.name} קיבל קלף דינים: ${curseCardName}`]
-      : [];
+    const mofetLog = suffix ? [`${playerWithCurse.name} ביצע מופת: ${def.name}${suffix} (+ אפקט ידני)`] : [];
+    const curseLog = curseCardName ? [`${playerWithCurse.name} קיבל קלף דינים: ${curseCardName}`] : [];
 
     const finalGame = {
       ...afterBuy,
@@ -292,12 +246,7 @@ export default function App() {
     applyGameState(finalGame);
 
     toastKeyRef.current += 1;
-    setToast({
-      cardName: def.name,
-      effects,
-      needsManual: true,
-      curseNote: curseCardName ? `💀 קלף דינים: ${curseCardName}` : undefined,
-    });
+    setToast({ cardName: def.name, effects, needsManual: true, curseNote: curseCardName ? `💀 קלף דינים: ${curseCardName}` : undefined });
 
     const factionName = factions.find((f) => f.id === playerWithCurse.factionId)?.name ?? "";
     if (playerWithCurse.mofets.length >= 3) {
@@ -328,16 +277,11 @@ export default function App() {
     const def = allCardDefs.find((d) => d.id === card.defId);
     const cardName = def?.name ?? instanceId;
     updateCurrentPlayer(
-      {
-        ...player,
-        yard: player.yard.filter((c) => c.instanceId !== instanceId),
-        discard: [...player.discard, card],
-      },
+      { ...player, yard: player.yard.filter((c) => c.instanceId !== instanceId), discard: [...player.discard, card] },
       [`${player.name} החזיר מחצר לזרוקים: ${cardName}`]
     );
   }
 
-  // ── Setup screen ──────────────────────────────────────────────────────────
   if (!game) {
     return (
       <GameSetup
@@ -352,9 +296,19 @@ export default function App() {
   const currentPlayer = game.players[game.currentPlayerIndex];
   const currentFaction = factions.find((f) => f.id === currentPlayer.factionId) ?? factions[0];
 
-  // ── Game screen ───────────────────────────────────────────────────────────
+  // Green dot: can afford at least one card in general or faction market
+  const canAffordMarket =
+    game.market.generalVisible.some((inst) => {
+      const def = allCardDefs.find((d) => d.id === inst.defId);
+      return def?.costMoney !== undefined && currentPlayer.money >= def.costMoney;
+    }) ||
+    currentPlayer.factionMarketVisible.some((inst) => {
+      const def = allCardDefs.find((d) => d.id === inst.defId);
+      return def?.costMoney !== undefined && currentPlayer.money >= def.costMoney;
+    });
+
   return (
-    <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+    <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}>
 
       <Toast key={toastKeyRef.current} toast={toast} onDismiss={dismissToast} />
 
@@ -369,18 +323,17 @@ export default function App() {
               {victory.factionName ? ` (${victory.factionName})` : ""}
             </p>
             <p className="text-stone-400 text-sm">ניצח!</p>
-            <button
-              onClick={() => setVictory(null)}
-              className="bg-amber-600 hover:bg-amber-500 text-white px-6 py-2.5 rounded-xl font-bold transition-colors"
-            >
-              המשך משחק
-            </button>
+            <button onClick={() => setVictory(null)} className="bg-amber-600 hover:bg-amber-500 text-white px-6 py-2.5 rounded-xl font-bold transition-colors">המשך משחק</button>
           </div>
         </div>
       )}
 
-      {/* Fixed header */}
-      <AppHeader
+      {/* Counters bar — contains all controls */}
+      <CountersBar
+        player={currentPlayer}
+        faction={currentFaction}
+        onUpdatePlayer={updateCurrentPlayer}
+        isEndingTurn={endTurnFlash}
         turnNumber={game.turnNumber}
         currentPlayerName={currentPlayer.name}
         log={game.log}
@@ -397,79 +350,41 @@ export default function App() {
         reloadState={reloadState}
         reloadError={reloadError}
         debugJson={import.meta.env.DEV ? JSON.stringify(game, null, 2) : undefined}
+        onOpenMarket={() => setMarketOpen(true)}
+        canAffordMarket={canAffordMarket}
       />
 
-      {/* Fixed counters bar */}
-      <CountersBar
-        player={currentPlayer}
-        faction={currentFaction}
-        onUpdatePlayer={updateCurrentPlayer}
-        isEndingTurn={endTurnFlash}
-      />
+      {/* Content area */}
+      <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column", overflow: "hidden" }}>
 
-      {/* 3-row grid: [Hand | Yard] / [General | Faction] / [Mofet full-width] */}
-      <div
-        style={{
-          flex: 1,
-          minHeight: 0,
-          display: "grid",
-          gridTemplateColumns: "1fr 1fr",
-          gridTemplateRows: "minmax(278px, auto) auto auto",
-          overflow: "auto",
-        }}
-        className="no-scrollbar"
-      >
-        {/* Row 1 – Right: Hand zone */}
-        <div style={{ overflow: "hidden", borderLeft: "2px solid #e5e7eb", borderBottom: "1px solid #e5e7eb" }}>
-          <PlayerBoard
-            player={currentPlayer}
-            allCardDefs={allCardDefs}
-            onUpdatePlayer={updateCurrentPlayer}
-            isEndingTurn={isEndingTurn}
-            onToast={(t) => { toastKeyRef.current += 1; setToast(t); }}
-            playerCount={game.players.length}
-            onCurseCardDC006={handleCurseCardDC006}
-          />
+        {/* Top 70%: Hand (75%) + Yard (25%) */}
+        <div style={{ flex: "0 0 70%", minHeight: 0, display: "flex", flexDirection: "row" }}>
+          {/* Hand — 75% */}
+          <div style={{ flex: "0 0 75%", minWidth: 0, borderLeft: "2px solid #e5e7eb", overflow: "hidden" }}>
+            <PlayerBoard
+              player={currentPlayer}
+              allCardDefs={allCardDefs}
+              onUpdatePlayer={updateCurrentPlayer}
+              isEndingTurn={isEndingTurn}
+              onToast={(t) => { toastKeyRef.current += 1; setToast(t); }}
+              playerCount={game.players.length}
+              onCurseCardDC006={handleCurseCardDC006}
+            />
+          </div>
+          {/* Yard — 25% */}
+          <div style={{ flex: "0 0 25%", minWidth: 0, overflow: "hidden" }}>
+            <YardSection
+              player={currentPlayer}
+              allCardDefs={allCardDefs}
+              factions={factions}
+              onReturnFromYard={handleReturnFromYard}
+            />
+          </div>
         </div>
 
-        {/* Row 1 – Left: Yard zone */}
-        <div style={{ overflow: "hidden", borderBottom: "1px solid #e5e7eb" }}>
-          <YardSection
-            player={currentPlayer}
-            allCardDefs={allCardDefs}
-            factions={factions}
-            onReturnFromYard={handleReturnFromYard}
-          />
-        </div>
-
-        {/* Row 2 – Right: שוק כללי */}
-        <div style={{ overflow: "hidden", borderLeft: "2px solid #e5e7eb", borderBottom: "1px solid #e5e7eb" }}>
-          <GeneralMarketSection
-            market={game.market}
-            allCardDefs={allCardDefs}
-            currentPlayerMoney={currentPlayer.money}
-            currentPlayerMilk={currentPlayer.milk}
-            onBuyGeneral={handleBuyGeneral}
-            buyBlocked={currentPlayer.blockBuyAndMofetThisTurn}
-          />
-        </div>
-
-        {/* Row 2 – Left: שוק פרטי */}
-        <div style={{ overflow: "hidden", borderBottom: "1px solid #e5e7eb" }}>
-          <FactionMarketSection
-            player={currentPlayer}
-            allCardDefs={allCardDefs}
-            factions={factions}
-            currentPlayerMoney={currentPlayer.money}
-            currentPlayerMilk={currentPlayer.milk}
-            onBuyFaction={handleBuyFaction}
-            buyBlocked={currentPlayer.blockBuyAndMofetThisTurn}
-          />
-        </div>
-
-        {/* Row 3 – שוק מופתים: full width */}
-        <div style={{ gridColumn: "1 / 3", overflow: "hidden" }}>
-          <MofetMarketSection
+        {/* Bottom 30%: Mofets */}
+        <div style={{ flex: "0 0 30%", minHeight: 0, overflow: "hidden", borderTop: "2px solid #e5e7eb" }}>
+          <MofetSection
             market={game.market}
             allCardDefs={allCardDefs}
             players={game.players}
@@ -482,8 +397,20 @@ export default function App() {
             buyAndMofetBlocked={currentPlayer.blockBuyAndMofetThisTurn}
           />
         </div>
-
       </div>
+
+      {/* Market modal */}
+      <MarketModal
+        isOpen={marketOpen}
+        onClose={() => setMarketOpen(false)}
+        market={game.market}
+        allCardDefs={allCardDefs}
+        player={currentPlayer}
+        factions={factions}
+        onBuyGeneral={handleBuyGeneral}
+        onBuyFaction={handleBuyFaction}
+        buyBlocked={currentPlayer.blockBuyAndMofetThisTurn}
+      />
     </div>
   );
 }

@@ -28,51 +28,86 @@ export default function YardSection({ player, allCardDefs, factions, onReturnFro
   }
 
   return (
-    <div className="border-b border-stone-200">
+    <div style={{ height: "100%", display: "flex", flexDirection: "column", backgroundColor: accent.bg, borderInlineStart: `2px solid ${accent.border}` }}>
       {/* Header */}
       <div
-        className="px-3 py-1 flex items-center justify-between border-b"
-        style={{ backgroundColor: accent.bg, borderColor: accent.border, minHeight: "32px" }}
+        style={{
+          padding: "6px 12px",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          borderBottom: `1px solid ${accent.border}`,
+          flexShrink: 0,
+        }}
       >
-        <span className="text-xs text-stone-500">{factionName}</span>
-        <div className="flex items-center gap-1.5">
-          <span className="text-xs font-semibold" style={{ color: accent.text }}>החצר</span>
+        <span style={{ fontSize: "11px", color: "#9ca3af" }}>{factionName}</span>
+        <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+          <span style={{ fontSize: "13px", fontWeight: 700, color: accent.text }}>החצר</span>
           <span
-            className="text-[10px] px-1.5 py-0.5 rounded-full"
-            style={{ backgroundColor: accent.border, color: accent.text }}
+            style={{
+              fontSize: "11px",
+              padding: "1px 7px",
+              borderRadius: "9999px",
+              backgroundColor: accent.border,
+              color: accent.text,
+              fontWeight: 600,
+            }}
           >
             {player.yard.length}
           </span>
         </div>
       </div>
 
-      {/* Card row */}
+      {/* 3×2 compact landscape grid */}
       {player.yard.length === 0 ? (
-        <div className="p-3">
+        <div
+          style={{
+            flex: 1,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
           <div
-            className="flex items-center justify-center rounded-xl text-stone-300 text-sm"
-            style={{ minHeight: "220px", border: "2px dashed #e5e7eb" }}
+            style={{
+              border: "2px dashed #e5e7eb",
+              borderRadius: "12px",
+              padding: "24px 32px",
+              color: "#d1d5db",
+              fontSize: "13px",
+            }}
           >
             ריק
           </div>
         </div>
       ) : (
         <div
-          className="flex items-start gap-2 px-2 pt-2 pb-1 overflow-x-auto"
-          style={{ minHeight: "230px" }}
+          style={{
+            flex: 1,
+            overflowY: "auto",
+            overflowX: "hidden",
+            padding: "8px",
+            display: "grid",
+            gridTemplateColumns: "repeat(2, 1fr)",
+            gridAutoRows: "min-content",
+            gap: "6px",
+            alignContent: "start",
+          }}
+          className="yard-zone-scroll"
         >
           {player.yard.map((inst) => {
             const def = getDef(inst.defId);
             if (!def) return null;
             return (
-              <CardView
-                key={inst.instanceId}
-                instance={inst}
-                def={def}
-                location="yard"
-                onAction={handleAction}
-                compact={true}
-              />
+              <div key={inst.instanceId} style={{ display: "flex", justifyContent: "center" }}>
+                <CardView
+                  instance={inst}
+                  def={def}
+                  location="yard"
+                  onAction={handleAction}
+                  cardSize="compact"
+                />
+              </div>
             );
           })}
         </div>

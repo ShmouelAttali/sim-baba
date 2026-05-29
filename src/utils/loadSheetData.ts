@@ -44,6 +44,7 @@ export async function loadCards(): Promise<CardDef[]> {
         costMilkPlay:  row[22]?.trim() ? parseInt(row[22]) : undefined,
         yardInfra:     row[23]?.trim() ? parseInt(row[23]) : undefined,
         effectDisplay: (row[24]?.trim() as CardDef["effectDisplay"]) || undefined,
+        imageUrl: row[25]?.trim() || undefined,
       } as CardDef;
     })
     .filter((c): c is CardDef => c !== null);

@@ -36,7 +36,6 @@ export default function PlayerBoard({
     );
   }
 
-  // Stable hand: combine hand + played, preserve original draw order
   const allHandCards = [...player.hand, ...player.played].sort(
     (a, b) => (a.drawOrder ?? 0) - (b.drawOrder ?? 0)
   );
@@ -56,15 +55,11 @@ export default function PlayerBoard({
           played: [...player.played, card],
         };
 
-        // Curse card — special handling per card ID
         if (def?.source === "curse_deck") {
           const otherCount = Math.max(0, playerCount - 1);
           const result = applyCurseCardEffect(playedPlayer, def, otherCount);
           const suffix = buildEffectLogSuffix(result.effects);
-          const logs = [
-            ...result.extraLogs,
-            `${player.name} שיחק קלף דינים: ${cardName}${suffix}`,
-          ];
+          const logs = [...result.extraLogs, `${player.name} שיחק קלף דינים: ${cardName}${suffix}`];
           if (result.otherPlayersFollowerGain !== undefined && onCurseCardDC006) {
             onCurseCardDC006(result.updatedPlayer, result.otherPlayersFollowerGain, logs);
           } else {
@@ -81,10 +76,7 @@ export default function PlayerBoard({
           const needsManual = def.effectDisplay === "icons_text";
           const suffix = buildEffectLogSuffix(effects);
           const manualNote = needsManual ? " (+ אפקט ידני)" : "";
-          onUpdatePlayer(updatedPlayer, [
-            ...extraLogs,
-            `${player.name} שיחק: ${cardName}${suffix}${manualNote}`,
-          ]);
+          onUpdatePlayer(updatedPlayer, [...extraLogs, `${player.name} שיחק: ${cardName}${suffix}${manualNote}`]);
           if (effects.length > 0) {
             onToast?.({ cardName, effects, needsManual });
           }
@@ -108,12 +100,7 @@ export default function PlayerBoard({
         if (def?.yardInfra) {
           yardedPlayer = { ...yardedPlayer, infrastructure: yardedPlayer.infrastructure + def.yardInfra };
           onUpdatePlayer(yardedPlayer, [`${player.name} העמיד בחצר: ${cardName}: 🏛️+${def.yardInfra}`]);
-          onToast?.({
-            cardName,
-            subtitle: "הועמד בחצר",
-            effects: [{ icon: "🏛️", label: "תשתית", delta: def.yardInfra }],
-            needsManual: false,
-          });
+          onToast?.({ cardName, subtitle: "הועמד בחצר", effects: [{ icon: "🏛️", label: "תשתית", delta: def.yardInfra }], needsManual: false });
         } else {
           onUpdatePlayer(yardedPlayer, [`${player.name} העמיד בחצר: ${cardName}`]);
         }
@@ -122,11 +109,7 @@ export default function PlayerBoard({
       case "discard": {
         const card = player.hand.find((c) => c.instanceId === instanceId);
         if (!card) return;
-        onUpdatePlayer({
-          ...player,
-          hand: player.hand.filter((c) => c.instanceId !== instanceId),
-          discard: [...player.discard, card],
-        });
+        onUpdatePlayer({ ...player, hand: player.hand.filter((c) => c.instanceId !== instanceId), discard: [...player.discard, card] });
         break;
       }
       case "returnToHand": {
@@ -141,11 +124,7 @@ export default function PlayerBoard({
       case "discardFromPlayed": {
         const card = player.played.find((c) => c.instanceId === instanceId);
         if (!card) return;
-        onUpdatePlayer({
-          ...player,
-          played: player.played.filter((c) => c.instanceId !== instanceId),
-          discard: [...player.discard, card],
-        });
+        onUpdatePlayer({ ...player, played: player.played.filter((c) => c.instanceId !== instanceId), discard: [...player.discard, card] });
         break;
       }
       case "returnFromDiscard": {
@@ -172,54 +151,70 @@ export default function PlayerBoard({
 
   return (
     <div
-      className="bg-white border-b border-stone-200"
-      style={{ opacity: isEndingTurn ? 0 : 1, transition: isEndingTurn ? "opacity 150ms ease" : "none" }}
+      style={{
+        height: "100%",
+        display: "flex",
+        flexDirection: "column",
+        background: "#fff",
+        opacity: isEndingTurn ? 0 : 1,
+        transition: isEndingTurn ? "opacity 150ms ease" : "none",
+        overflow: "hidden",
+      }}
     >
       {/* Header */}
-      <div className="px-3 py-1 flex items-center justify-between border-b border-stone-100 bg-amber-50/60" style={{ minHeight: "32px" }}>
-        <div className="flex gap-1.5">
+      <div
+        style={{
+          padding: "6px 12px",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          borderBottom: "1px solid #f3f4f6",
+          background: "#fffbeb",
+          flexShrink: 0,
+        }}
+      >
+        <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
           <button
             onClick={handleDrawOne}
-            className="bg-stone-500 hover:bg-stone-400 text-white text-xs px-2 py-1 rounded transition-colors"
+            style={{ background: "#6b7280", color: "white", border: "none", borderRadius: "6px", padding: "4px 10px", fontSize: "12px", cursor: "pointer" }}
           >
             שלוף קלף
           </button>
           <button
             onClick={handleShuffleDiscardToDeck}
-            className="bg-stone-500 hover:bg-stone-400 text-white text-xs px-2 py-1 rounded transition-colors"
+            style={{ background: "#6b7280", color: "white", border: "none", borderRadius: "6px", padding: "4px 10px", fontSize: "12px", cursor: "pointer" }}
           >
             ערבב זרוקים לדק
           </button>
           <button
             onClick={() => setDiscardOpen(true)}
-            className="text-xs text-stone-500 hover:text-stone-700 bg-stone-100 hover:bg-stone-200 px-2 py-1 rounded transition-colors"
+            style={{ background: "#f3f4f6", color: "#6b7280", border: "none", borderRadius: "6px", padding: "4px 10px", fontSize: "12px", cursor: "pointer" }}
           >
             זרוקים ({player.discard.length}) 🗂
           </button>
         </div>
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-stone-500 font-semibold">יד</span>
-          <span className="text-xs text-stone-400 bg-stone-100 px-1.5 py-0.5 rounded-full">{player.hand.length}</span>
-          {player.played.length > 0 && (
-            <>
-              <span className="text-xs text-stone-400">·</span>
-              <span className="text-xs text-stone-500 font-semibold">שוחקו</span>
-              <span className="text-xs text-stone-400 bg-green-100 px-1.5 py-0.5 rounded-full">{player.played.length}</span>
-            </>
-          )}
-          <span className="text-xs text-stone-400">
-            דק: <strong className="text-stone-600">{player.deck.length}</strong>
-          </span>
+        <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "12px", color: "#6b7280" }}>
+          <span>יד ({player.hand.length})</span>
+          {player.played.length > 0 && <span>| שוחקו ({player.played.length})</span>}
+          <span style={{ color: "#9ca3af" }}>דק: <strong style={{ color: "#374151" }}>{player.deck.length}</strong></span>
         </div>
       </div>
 
-      {/* Card area — horizontal scroll, natural height */}
+      {/* Large card row — horizontal scroll, 5.5 cards visible */}
       <div
-        className="flex items-start gap-2 px-2 pt-2 pb-1 overflow-x-auto"
-        style={{ minHeight: "230px" }}
+        style={{
+          flex: 1,
+          display: "flex",
+          alignItems: "center",
+          gap: "12px",
+          padding: "10px 16px",
+          overflowX: "auto",
+          overflowY: "hidden",
+        }}
+        className="hand-zone"
       >
         {allHandCards.length === 0 ? (
-          <div className="flex items-center justify-center w-full text-stone-300 text-sm" style={{ minHeight: "200px" }}>
+          <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", color: "#d1d5db", fontSize: "14px" }}>
             ריק
           </div>
         ) : (
@@ -228,18 +223,20 @@ export default function PlayerBoard({
             if (!def) return null;
             const isPlayed = playedIds.has(inst.instanceId);
             return (
-              <CardView
-                key={inst.instanceId}
-                instance={inst}
-                def={def}
-                location="hand"
-                playerMoney={player.money}
-                playerMilk={player.milk}
-                onAction={handleCardAction}
-                compact={true}
-                isPlayed={isPlayed}
-                invertEffects={player.invertEffectsThisTurn}
-              />
+              <div key={inst.instanceId} className="hand-card-slot">
+                <CardView
+                  instance={inst}
+                  def={def}
+                  location="hand"
+                  playerMoney={player.money}
+                  playerMilk={player.milk}
+                  onAction={handleCardAction}
+                  cardSize="large"
+                  isPlayed={isPlayed}
+                  invertEffects={player.invertEffectsThisTurn}
+                  fillWidth={true}
+                />
+              </div>
             );
           })
         )}
@@ -256,15 +253,8 @@ export default function PlayerBoard({
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between px-5 py-3 border-b border-stone-200 shrink-0">
-              <h2 className="font-bold text-stone-700">
-                זרוקים של {player.name} ({player.discard.length})
-              </h2>
-              <button
-                onClick={() => setDiscardOpen(false)}
-                className="text-stone-400 hover:text-stone-600 text-xl leading-none w-7 h-7 flex items-center justify-center rounded-full hover:bg-stone-100 transition-colors"
-              >
-                ✕
-              </button>
+              <h2 className="font-bold text-stone-700">זרוקים של {player.name} ({player.discard.length})</h2>
+              <button onClick={() => setDiscardOpen(false)} className="text-stone-400 hover:text-stone-600 text-xl leading-none w-7 h-7 flex items-center justify-center rounded-full hover:bg-stone-100 transition-colors">✕</button>
             </div>
             <div className="flex-1 overflow-y-auto p-4">
               {player.discard.length === 0 ? (
@@ -280,10 +270,7 @@ export default function PlayerBoard({
                         instance={inst}
                         def={def}
                         location="discard"
-                        onAction={(action, id) => {
-                          handleCardAction(action, id);
-                          setDiscardOpen(false);
-                        }}
+                        onAction={(action, id) => { handleCardAction(action, id); setDiscardOpen(false); }}
                       />
                     );
                   })}

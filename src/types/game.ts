@@ -46,6 +46,7 @@ export interface CardDef {
   costMilkPlay?: number;
   yardInfra?: number;
   effectDisplay?: "icons" | "icons_text" | "text";
+  imageUrl?: string;
 }
 
 export interface CardInstance {
