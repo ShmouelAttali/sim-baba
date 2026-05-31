@@ -36,9 +36,11 @@ interface SidePanelProps {
   title: string;
   subtitle?: string;
   count: number;
+  onClose?: () => void;
+  money?: number;
 }
 
-function SidePanel({ title, subtitle, count }: SidePanelProps) {
+function SidePanel({ title, subtitle, count, onClose, money }: SidePanelProps) {
   return (
     <div style={{
       width: 108,
@@ -46,13 +48,47 @@ function SidePanel({ title, subtitle, count }: SidePanelProps) {
       display: "flex",
       flexDirection: "column",
       alignItems: "center",
-      justifyContent: "center",
-      padding: "12px 8px",
+      justifyContent: "flex-start",
+      padding: "10px 8px",
       background: "#f9fafb",
       borderLeft: "1px solid #e5e7eb",
       gap: "8px",
       textAlign: "center",
     }}>
+      {onClose && (
+        <button
+          onClick={onClose}
+          style={{
+            background: "none",
+            border: "1px solid #d1d5db",
+            borderRadius: "8px",
+            padding: "5px 10px",
+            fontSize: "13px",
+            cursor: "pointer",
+            color: "#374151",
+            width: "100%",
+          }}
+        >
+          ✕ סגור
+        </button>
+      )}
+      {money !== undefined && (
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 2 }}>
+          <span style={{ fontSize: "11px", color: "#a16207", fontWeight: 600 }}>כסף</span>
+          <span style={{
+            fontSize: "15px",
+            fontWeight: 800,
+            color: "#78350f",
+            background: "#fef9c3",
+            border: "1px solid #fde047",
+            borderRadius: "9999px",
+            padding: "2px 12px",
+            whiteSpace: "nowrap",
+          }}>
+            💰 {money}
+          </span>
+        </div>
+      )}
       <span style={{ fontSize: "13px", fontWeight: 700, color: "#374151", lineHeight: 1.3 }}>
         {title}
       </span>
@@ -130,7 +166,7 @@ export default function MarketModal({
         style={{
           background: "#fff",
           borderRadius: "16px",
-          width: "min(1400px, 96vw)",
+          width: "min(1640px, 98vw)",
           height: "min(92vh, 860px)",
           direction: "rtl",
           boxShadow: "0 32px 96px rgba(0,0,0,0.5)",
@@ -140,34 +176,6 @@ export default function MarketModal({
         }}
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Header */}
-        <div style={{
-          padding: "12px 20px",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          borderBottom: "1px solid #e5e7eb",
-          flexShrink: 0,
-        }}>
-          <button
-            onClick={onClose}
-            style={{
-              background: "none",
-              border: "1px solid #d1d5db",
-              borderRadius: "8px",
-              padding: "6px 12px",
-              fontSize: "14px",
-              cursor: "pointer",
-              color: "#374151",
-            }}
-          >
-            ✕ סגור
-          </button>
-          <h2 style={{ margin: 0, fontSize: "18px", fontWeight: 700, color: "#1c1917" }}>
-            שוק — {factionName}
-          </h2>
-        </div>
-
         {/* Body: two equal rows, no scroll */}
         <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}>
 
@@ -179,7 +187,7 @@ export default function MarketModal({
             flexDirection: "row",
             borderBottom: "1px solid #e5e7eb",
           }}>
-            <SidePanel title="שוק כללי" count={market.generalDeck.length} />
+            <SidePanel title="שוק כללי" count={market.generalDeck.length} onClose={onClose} money={player.money} />
             <div style={{
               flex: 1,
               display: "flex",

@@ -24,6 +24,223 @@ body {
   overflow: hidden;
 }
 
+/* ── Game layout classes (desktop = same as removed inline styles) ─────────── */
+
+.game-main {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.game-content {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.game-top {
+  flex: 0 0 auto;
+  height: calc(min(440px, 31vw) + 100px); /* card height + 20px top/bottom + 30px extra + 30px for 2-row yard */
+  min-height: 0;
+  display: flex;
+  flex-direction: row;
+}
+
+.game-hand {
+  flex: 1;
+  min-width: 0;
+  border-left: 2px solid #e5e7eb;
+  overflow: hidden;
+}
+
+.game-yard {
+  width: 500px;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.yard-zone {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.game-mofets {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  border-top: 2px solid #e5e7eb;
+}
+
+/* ── Large card — base (desktop) ────────────────────────────────────────── */
+
+.large-card {
+  width: min(240px, 17vw);
+  height: min(440px, 31vw);
+  flex-shrink: 0;
+}
+
+.card-image-section {
+  flex: 0 0 55%;
+}
+
+.card-content-section {
+  padding: 6px 10px 8px;
+  gap: 4px;
+}
+
+.btn-primary {
+  padding: 6px 8px;
+  font-size: 12px;
+}
+
+.btn-secondary {
+  padding: 6px 8px;
+  font-size: 11px;
+}
+
+.effect-text-sm { font-size: 10px; }
+.effect-text-lg { font-size: 12px; }
+
+/* ── Responsive overrides — max-width: 1279px only ───────────────────────── */
+
+@media (max-width: 1279px) {
+  html {
+    height: auto;
+  }
+
+  body {
+    height: auto;
+    min-height: 100vh;
+    overflow: auto;
+  }
+
+  #root {
+    height: auto;
+    min-height: 100vh;
+    overflow: visible;
+  }
+
+  .game-main {
+    flex: none;
+    min-height: 0;
+    height: auto;
+  }
+
+  .game-content {
+    flex: none;
+    height: auto;
+    min-height: 0;
+    overflow: visible;
+  }
+
+  .game-top {
+    flex: none;
+    flex-direction: column;
+    height: auto;
+    min-height: 0;
+  }
+
+  .game-hand {
+    flex: none;
+    width: 100%;
+    height: 55vh;
+    min-height: 300px;
+    border-left: none;
+    border-bottom: 2px solid #e5e7eb;
+  }
+
+  .game-yard {
+    flex: none;
+    width: 100%;
+    height: 30vh;
+    min-height: 180px;
+  }
+
+  .game-mofets {
+    flex: none;
+    height: auto;
+    min-height: 160px;
+    max-height: 28vh;
+  }
+
+  /* Name banner — slightly smaller on narrow screens */
+  .name-banner {
+    font-size: clamp(11px, 1.3vw, 15px);
+    padding: clamp(4px, 0.6vw, 8px) clamp(8px, 1.5vw, 20px);
+  }
+
+  /* Hand card slots — show 2.5 cards on narrow screens */
+  .hand-card-slot {
+    flex: 0 0 calc((100% - 8px * 2) / 2.5);
+  }
+
+  /* Market modal — full width on narrow screens */
+  .market-modal-content {
+    max-width: 95vw;
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+
+  /* Large cards — taller so content section isn't clipped */
+  .large-card {
+    height: clamp(280px, 42vw, 440px);
+  }
+
+  /* Content section — let it breathe, don't clip */
+  .card-content-section {
+    overflow: visible;
+  }
+}
+
+/* ── Mobile landscape — card sizing ─────────────────────────────────────── */
+
+@media (max-width: 1279px) and (orientation: landscape) {
+  .large-card {
+    height: calc(100vh - 120px);
+    width: auto;
+    aspect-ratio: 2 / 3;
+    max-width: 180px;
+  }
+
+  .card-image-section {
+    flex: 0 0 45%;
+  }
+
+  .card-content-section {
+    padding: 4px 8px 6px;
+    gap: 2px;
+  }
+
+  .name-banner {
+    font-size: 11px;
+    padding: 4px 10px;
+  }
+
+  .btn-primary,
+  .btn-secondary {
+    padding: 4px 6px;
+    font-size: 10px;
+  }
+
+  .effect-text-sm,
+  .effect-text-lg {
+    font-size: 9px;
+  }
+}
+
+/* ── Hide scrollbars on touch/mobile ────────────────────────────────────── */
+
+@media (max-width: 768px) {
+  ::-webkit-scrollbar { display: none; }
+  * { -ms-overflow-style: none; scrollbar-width: none; }
+
+  /* Re-enable custom scrollbars that should stay visible */
+  .log-scroll { scrollbar-width: thin; }
+  .log-scroll::-webkit-scrollbar { display: block; }
+}
+
 /* Log scrollbar */
 .log-scroll {
   scrollbar-width: thin;
@@ -195,6 +412,96 @@ body {
 .yard-zone-scroll::-webkit-scrollbar-track { background: rgba(0,0,0,0.08); border-radius: 9999px; }
 .yard-zone-scroll::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.35); border-radius: 9999px; }
 .yard-zone-scroll::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,0.55); }
+
+/* ── Card name banner ────────────────────────────────────── */
+
+.name-banner {
+  width: 100%;
+  flex-shrink: 0;
+  margin: 0;
+  padding: 7px 12px;
+  text-align: center;
+  font-size: 15px;
+  font-weight: 800;
+  color: white;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.5);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  border-radius: 0;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.2),
+    inset 0 -1px 0 rgba(0,0,0,0.2);
+}
+
+.name-banner--action      { background: linear-gradient(135deg, #1e3a8a, #2563eb); }
+.name-banner--person      { background: linear-gradient(135deg, #14532d, #16a34a); }
+.name-banner--institution { background: linear-gradient(135deg, #78350f, #d97706); }
+.name-banner--trouble     { background: linear-gradient(135deg, #7f1d1d, #dc2626); }
+.name-banner--mofet       { background: linear-gradient(135deg, #581c87, #9333ea); }
+.name-banner--helper      { background: linear-gradient(135deg, #1f2937, #4b5563); }
+
+/* ── Rotate-to-landscape overlay ────────────────────────── */
+
+.rotate-message {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: #1a1a2e;
+  z-index: 9999;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  color: white;
+  text-align: center;
+  font-family: 'Frank Ruhl Libre', serif;
+  direction: rtl;
+}
+
+.rotate-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+.rotate-icon {
+  font-size: 64px;
+  animation: wiggle 1.5s ease-in-out infinite;
+}
+
+.rotate-arrow {
+  font-size: 48px;
+  animation: spin 2s linear infinite;
+}
+
+.rotate-message h2 {
+  font-size: 24px;
+  font-weight: 700;
+  margin: 0;
+}
+
+.rotate-message p {
+  font-size: 16px;
+  color: rgba(255,255,255,0.7);
+  margin: 0;
+}
+
+@keyframes wiggle {
+  0%, 100% { transform: rotate(-15deg); }
+  50%       { transform: rotate(15deg); }
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+@media (orientation: portrait) and (max-width: 1279px) {
+  .rotate-message {
+    display: flex;
+  }
+}
 
 /* ── Trouble card pulse ───────────────────────────────────── */
 

@@ -67,6 +67,7 @@ const BANNER_GRADIENT: Record<string, string> = {
   helper:      "linear-gradient(135deg, #1f2937, #4b5563)",
 };
 
+
 const COST_CIRCLE_BG: Record<string, string> = {
   action:      "#2563eb",
   person:      "#16a34a",
@@ -155,8 +156,8 @@ function EffectBadge({ icon, label, variant, small = false }: BadgeProps) {
         backgroundColor: bg,
         color,
         borderRadius: "9999px",
-        padding: small ? "1px 5px" : "3px 8px",
-        fontSize: small ? "10px" : "12px",
+        padding: small ? "1px 5px" : "4px 9px",
+        fontSize: small ? "10px" : "13px",
         fontWeight: 700,
         whiteSpace: "nowrap",
         display: "inline-flex",
@@ -302,6 +303,16 @@ function CardImage({ def, large }: { def: CardDef; large: boolean }) {
   );
 }
 
+// ── HEARTHSTONE NAME BANNER ─────────────────────────────────────────────────
+
+function CardNameBanner({ name, type }: { name: string; type: string }) {
+  return (
+    <div className={`name-banner name-banner--${type}`}>
+      {name}
+    </div>
+  );
+}
+
 // ── COMPACT CARD (yard + mofets) ─────────────────────────────────────────────
 
 function CompactCard({
@@ -326,6 +337,7 @@ function CompactCard({
   useEffect(() => () => { if (hoverTimer.current) clearTimeout(hoverTimer.current); }, []);
 
   function handleMouseEnter() {
+    if (window.matchMedia("(hover: none) and (pointer: coarse)").matches) return;
     hoverTimer.current = setTimeout(() => {
       if (!cardRef.current) return;
       const rect = cardRef.current.getBoundingClientRect();
@@ -383,7 +395,7 @@ function CompactCard({
   if (def.gainDanger !== undefined && def.gainDanger !== 0) iconBadgesCompact.push({ icon: "⚠️", v: `${def.gainDanger > 0 ? "+" : ""}${def.gainDanger}` });
   if (def.gainDraw      !== undefined) iconBadgesCompact.push({ icon: "🎴", v: `+${def.gainDraw}` });
   if (def.yardInfra     !== undefined) iconBadgesCompact.push({ icon: "🏛️", v: `+${def.yardInfra}` });
-  const hasTextContent = !!def.milkText || !!def.yardText || !!def.effectText;
+  const hasTextContent = !!def.milkText || !!def.yardText || !!def.effectText || !!def.requirements;
 
   const actionBtn = onAction ? (
     location === "yard" ? (
@@ -418,7 +430,7 @@ function CompactCard({
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
         style={{
-          width: "min(130px, 9vw)",
+          width: "min(156px, 10.8vw)",
           aspectRatio: "2/3",
           display: "flex",
           flexDirection: "column",
@@ -482,6 +494,22 @@ function CompactCard({
               {hasTextContent && (
                 <span title="יש טקסט נוסף — לחץ לפרטים" style={{ color: "#9ca3af", fontSize: "9px" }}>•••</span>
               )}
+            </div>
+          )}
+          {def.yardText && (
+            <div style={{ display: "flex", alignItems: "flex-start", gap: "2px" }}>
+              <span style={{ fontSize: "9px", flexShrink: 0 }}>🏡</span>
+              <span style={{ fontSize: "9px", color: "#166534", lineHeight: 1.3, whiteSpace: "normal" as const }}>
+                {def.yardText}
+              </span>
+            </div>
+          )}
+          {def.requirements && (
+            <div style={{ display: "flex", alignItems: "flex-start", gap: "2px", background: "#f5f3ff", borderRadius: "4px", padding: "2px 4px", border: "1px solid #ddd6fe" }}>
+              <span style={{ fontSize: "9px", flexShrink: 0 }}>🔒</span>
+              <span style={{ fontSize: "9px", color: "#6d28d9", lineHeight: 1.3, whiteSpace: "normal" as const }}>
+                {def.requirements}
+              </span>
             </div>
           )}
           {actionBtn && <div style={{ marginTop: "auto", flexShrink: 0 }}>{actionBtn}</div>}
@@ -628,11 +656,12 @@ export default function CardView({
             else if (location === "market-faction") onAction("buy-faction", instance.instanceId);
             else onAction("buy-mofet", instance.instanceId);
           }}
+          className="btn-primary"
           style={{
             background: isMofetMarket
               ? canAffordMilk ? "#9333ea" : "#b91c1c"
               : canAffordMoney ? "#d97706" : "#b91c1c",
-            color: "white", borderRadius: "7px", padding: "6px 8px", fontSize: "12px",
+            color: "white", borderRadius: "7px",
             fontWeight: 700, width: "100%", border: "none", cursor: "pointer",
           }}
         >
@@ -646,7 +675,8 @@ export default function CardView({
     const yardReturnButton = onAction && location === "yard" ? (
       <button
         onClick={() => onAction("returnFromYard", instance.instanceId)}
-        style={{ background: "#78716c", color: "white", borderRadius: "7px", padding: "6px 8px", fontSize: "12px", fontWeight: 700, width: "100%", border: "none", cursor: "pointer" }}
+        className="btn-secondary"
+        style={{ background: "#78716c", color: "white", borderRadius: "7px", fontWeight: 700, width: "100%", border: "none", cursor: "pointer" }}
       >
         החזר לזרוקים
       </button>
@@ -657,22 +687,25 @@ export default function CardView({
         <div style={{ display: "flex", gap: "5px" }}>
           <button
             onClick={() => onAction("play", instance.instanceId)}
-            style={{ flex: 2, background: "#2563eb", color: "white", borderRadius: "7px", padding: "6px 0", fontSize: "12px", fontWeight: 700, border: "none", cursor: "pointer" }}
+            className="btn-primary"
+            style={{ flex: 2, background: "#2563eb", color: "white", borderRadius: "7px", fontWeight: 700, border: "none", cursor: "pointer" }}
           >
             שחק
           </button>
-          {def.yardText && !invertEffects && !isCurse && (
+          {(def.yardText || def.yardInfra !== undefined) && !invertEffects && !isCurse && (
             <button
               onClick={() => onAction("yard", instance.instanceId)}
-              style={{ flex: 1, background: "#059669", color: "white", borderRadius: "7px", padding: "6px 0", fontSize: "11px", fontWeight: 700, border: "none", cursor: "pointer" }}
+              className="btn-secondary"
+              style={{ flex: 1, background: "#059669", color: "white", borderRadius: "7px", fontWeight: 700, border: "none", cursor: "pointer" }}
             >
               העמד בחצר
             </button>
           )}
-          {def.yardText && invertEffects && !isCurse && (
+          {(def.yardText || def.yardInfra !== undefined) && invertEffects && !isCurse && (
             <button
               disabled
-              style={{ flex: 1, background: "#d1d5db", color: "#9ca3af", borderRadius: "7px", padding: "6px 0", fontSize: "11px", border: "none", cursor: "not-allowed" }}
+              className="btn-secondary"
+              style={{ flex: 1, background: "#d1d5db", color: "#9ca3af", borderRadius: "7px", border: "none", cursor: "not-allowed" }}
             >
               העמד בחצר
             </button>
@@ -696,35 +729,18 @@ export default function CardView({
 
     // Preview mode: truncateText=false → auto height, full text, no ellipsis
     const isPreview = !fillWidth && !truncateText;
-    const textSuffix = (text: string, color = "#374151", noTruncate = false) => (
-      <span
-        title={text}
-        style={{
-          fontSize: "11px", color, flex: 1, minWidth: 0,
-          ...(isPreview || noTruncate
-            ? { whiteSpace: "normal" as const }
-            : { whiteSpace: "nowrap" as const, overflow: "hidden" as const, textOverflow: "ellipsis" as const }),
-        }}
-      >
-        {text}
-      </span>
-    );
+    const textRowCount = [def.milkText, def.yardText, def.effectText].filter(Boolean).length;
 
-    // Image section: percentage for fillWidth/fixed-height cards; fixed px for preview (auto-height)
+    // Image section: flex from CSS (.card-image-section); preview overrides with explicit height
     const imageSectionStyle: React.CSSProperties = isPreview
-      ? { height: "min(220px, 15.4vw)", flexShrink: 0, position: "relative", overflow: "hidden", borderRadius: "14px 14px 0 0" }
-      : { flex: "0 0 55%", position: "relative", overflow: "hidden", borderRadius: "14px 14px 0 0" };
+      ? { height: "min(220px, 15.4vw)", flex: "none", position: "relative", overflow: "hidden", borderRadius: "14px 14px 0 0" }
+      : { position: "relative", overflow: "hidden", borderRadius: "14px 14px 0 0" };
 
     return (
       <div
-        className={`card-hover ${fillWidth ? "" : "shrink-0"} ${inHandTrouble ? "danger-pulse" : ""} ${isNew ? "card-enter" : ""} ${extraClass}`}
+        className={`card-hover ${isPreview ? "" : "large-card"} ${fillWidth ? "" : "shrink-0"} ${inHandTrouble ? "danger-pulse" : ""} ${isNew ? "card-enter" : ""} ${extraClass}`}
         style={{
-          width: fillWidth ? "100%" : "min(240px, 17vw)",
-          ...(fillWidth
-            ? { height: "100%" }
-            : isPreview
-            ? {}
-            : { height: "min(400px, 28vw)" }),
+          ...(fillWidth ? { width: "100%", height: "100%" } : {}),
           display: "flex",
           flexDirection: "column",
           border: `${inHandTrouble ? "3px" : "2px"} solid ${borderColor}`,
@@ -735,8 +751,8 @@ export default function CardView({
           ...(isPlayed ? { filter: "grayscale(75%) brightness(0.75)" } : {}),
         }}
       >
-        {/* Image section — 55% */}
-        <div style={imageSectionStyle}>
+        {/* Image section — 55% (flex from .card-image-section CSS class) */}
+        <div className="card-image-section" style={imageSectionStyle}>
           <CardImage def={def} large={true} />
 
           {/* Cost circles — top-left */}
@@ -782,36 +798,37 @@ export default function CardView({
           )}
         </div>
 
-        {/* Name banner — overlaps image/content boundary */}
-        <div style={{
-          position: "relative", zIndex: 20,
-          margin: "-12px 10px 0 10px", borderRadius: "6px", padding: "5px 14px",
-          textAlign: "center", fontSize: "14px", fontWeight: 800,
-          color: "white", textShadow: "0 1px 3px rgba(0,0,0,0.9)",
-          whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
-          boxShadow: "0 2px 8px rgba(0,0,0,0.35)", flexShrink: 0,
-          background: BANNER_GRADIENT[def.type] ?? "linear-gradient(135deg, #1f2937, #4b5563)",
-        }}>
-          {def.name}
-        </div>
+        {/* Name banner — Hearthstone curved shape */}
+        <CardNameBanner name={def.name} type={def.type} />
 
-        {/* Content section — 3 rows max */}
-        <div style={{
+        {/* Content section — 4-row layout */}
+        <div className={isPreview ? "" : "card-content-section"} style={{
           ...(isPreview ? {} : { flex: 1, minHeight: 0 }),
-          padding: "6px 10px 8px",
+          ...(isPreview ? { padding: "6px 10px 8px", gap: "4px" } : {}),
           background: CONTENT_BG[def.type] ?? "#f9fafb",
           display: "flex", flexDirection: "column",
-          justifyContent: "space-between",
+          justifyContent: "flex-start",
           overflow: isPreview ? "visible" : "hidden",
           borderRadius: "0 0 14px 14px",
         }}>
-          {/* Effect rows */}
-          <div style={{ display: "flex", flexDirection: "column", gap: "3px", overflow: "hidden" }}>
-            {/* Row: play badges */}
+          {/* Effect rows — 4-row layout */}
+          <div style={{ display: "flex", flexDirection: "column", gap: "2px", overflow: "hidden" }}>
+
+            {/* Requirements row */}
+            {def.requirements && (
+              <div style={{ display: "flex", alignItems: "flex-start", gap: "4px", marginBottom: 2, background: "#f5f3ff", borderRadius: "6px", padding: "3px 6px", border: "1px solid #ddd6fe" }}>
+                <span style={{ fontSize: "13px", flexShrink: 0, width: 18, textAlign: "center" }}>🔒</span>
+                <span className={`effect-text-single ${textRowCount >= 2 ? "effect-text-sm" : "effect-text-lg"}`} style={{ color: "#6d28d9", flex: 1, minWidth: 0, lineHeight: 1.4, whiteSpace: "normal" as const }}>
+                  {def.requirements}
+                </span>
+              </div>
+            )}
+
+            {/* ROW 1: Milk badges */}
             {milkBadges.length > 0 && (
-              <div style={{ display: "flex", alignItems: "center", gap: "5px", minHeight: 22, overflow: "hidden" }}>
-                <span style={{ fontSize: "13px", flexShrink: 0 }}>🎯</span>
-                <div style={{ display: "flex", gap: "3px", flexShrink: 0, flexWrap: "nowrap" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "5px" }}>
+                <span style={{ fontSize: "13px", flexShrink: 0, width: 18, textAlign: "center" }}>🎯</span>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: "3px" }}>
                   {milkBadges.map((b, i) => (
                     <EffectBadge key={i} icon={b.icon} label={b.label} variant={b.variant} />
                   ))}
@@ -819,60 +836,82 @@ export default function CardView({
               </div>
             )}
 
-            {/* Row: milkText */}
+            {/* ROW 2: milkText */}
             {def.milkText && (
-              <div style={{ display: "flex", alignItems: "center", gap: "5px", minHeight: 20, overflow: "hidden", paddingInlineStart: milkBadges.length > 0 ? "18px" : undefined }}>
-                {milkBadges.length === 0 && <span style={{ fontSize: "13px", flexShrink: 0 }}>🎯</span>}
-                {textSuffix(def.milkText, "#374151", true)}
+              <div style={{ display: "flex", alignItems: "flex-start", gap: "4px", marginBottom: 2 }}>
+                {milkBadges.length === 0
+                  ? <span style={{ fontSize: "13px", flexShrink: 0, width: 18, textAlign: "center" }}>🎯</span>
+                  : <span style={{ width: 18, flexShrink: 0 }} />}
+                <span className={`effect-text-single ${textRowCount >= 2 ? "effect-text-sm" : "effect-text-lg"}`} style={{ color: "#374151", flex: 1, minWidth: 0, lineHeight: 1.4, whiteSpace: "normal" as const }}>
+                  {def.milkText}
+                </span>
               </div>
             )}
 
-            {/* Row: yard badges */}
-            {(def.yardInfra !== undefined) && (
-              <div style={{ display: "flex", alignItems: "center", gap: "5px", minHeight: 22, overflow: "hidden" }}>
-                <span style={{ fontSize: "13px", flexShrink: 0 }}>🏡</span>
-                <div style={{ display: "flex", gap: "3px", flexShrink: 0 }}>
+            {/* ROW 3: Yard badges */}
+            {def.yardInfra !== undefined && (
+              <div style={{ display: "flex", alignItems: "center", gap: "5px" }}>
+                <span style={{ fontSize: "13px", flexShrink: 0, width: 18, textAlign: "center" }}>🏡</span>
+                <div style={{ display: "flex", gap: "3px" }}>
                   <EffectBadge icon="🏛️" label={`+${def.yardInfra}`} variant="gain" />
                 </div>
               </div>
             )}
 
-            {/* Row: yardText */}
+            {/* ROW 4: yardText */}
             {def.yardText && (
-              <div style={{ display: "flex", alignItems: "center", gap: "5px", minHeight: 20, overflow: "hidden", paddingInlineStart: def.yardInfra !== undefined ? "18px" : undefined }}>
-                {def.yardInfra === undefined && <span style={{ fontSize: "13px", flexShrink: 0 }}>🏡</span>}
-                {textSuffix(def.yardText, "#166534", true)}
+              <div style={{ display: "flex", alignItems: "flex-start", gap: "4px", marginBottom: 2 }}>
+                {def.yardInfra === undefined
+                  ? <span style={{ fontSize: "13px", flexShrink: 0, width: 18, textAlign: "center" }}>🏡</span>
+                  : <span style={{ width: 18, flexShrink: 0 }} />}
+                <span className={`effect-text-single ${textRowCount >= 2 ? "effect-text-sm" : "effect-text-lg"}`} style={{ color: "#166534", flex: 1, minWidth: 0, lineHeight: 1.4, whiteSpace: "normal" as const }}>
+                  {def.yardText}
+                </span>
               </div>
             )}
 
-            {/* Row 3: trouble effectText */}
+            {/* Trouble: icon row + effectText row */}
             {isTrouble && def.effectText && (
-              <div style={{ display: "flex", alignItems: "center", gap: "5px", minHeight: 22, overflow: "hidden" }}>
-                <span style={{ fontSize: "13px", flexShrink: 0 }}>⚠️</span>
-                {textSuffix(def.effectText, "#991b1b", true)}
-              </div>
+              <>
+                <div style={{ display: "flex", alignItems: "center", gap: "5px" }}>
+                  <span style={{ fontSize: "13px", flexShrink: 0, width: 18, textAlign: "center" }}>⚠️</span>
+                </div>
+                <div style={{ display: "flex", alignItems: "flex-start", gap: "4px", marginBottom: 2 }}>
+                  <span style={{ width: 18, flexShrink: 0 }} />
+                  <span className={`effect-text-single ${textRowCount >= 2 ? "effect-text-sm" : "effect-text-lg"}`} style={{ color: "#991b1b", flex: 1, minWidth: 0, lineHeight: 1.4, whiteSpace: "normal" as const }}>
+                    {def.effectText}
+                  </span>
+                </div>
+              </>
             )}
 
-            {/* Row 3: mofet curse warning */}
+            {/* Mofet: curse warning */}
             {isMofet && (
-              <div style={{ display: "flex", alignItems: "center", gap: "5px", minHeight: 22, overflow: "hidden" }}>
-                <span style={{ fontSize: "13px", flexShrink: 0 }}>💀</span>
-                <span style={{ fontSize: "10px", color: "#7c3aed", fontWeight: 600 }}>קלף דין יתווסף לראש הדק</span>
+              <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+                <span style={{ fontSize: "13px", flexShrink: 0, width: 18, textAlign: "center" }}>💀</span>
+                <span style={{ fontSize: "11px", color: "#7c3aed", fontWeight: 600 }}>קלף דין יתווסף לראש הדק</span>
               </div>
             )}
 
-            {/* Row 3: other effectText (action / person / institution / helper) */}
+            {/* Other effectText (action / person / institution / helper): icon row + text row */}
             {def.effectText && !isTrouble && !isMofet && (
-              <div style={{ display: "flex", alignItems: "center", gap: "5px", minHeight: 22, overflow: "hidden" }}>
-                <span style={{ fontSize: "13px", flexShrink: 0 }}>📌</span>
-                {textSuffix(def.effectText)}
-              </div>
+              <>
+                <div style={{ display: "flex", alignItems: "center", gap: "5px" }}>
+                  <span style={{ fontSize: "13px", flexShrink: 0, width: 18, textAlign: "center" }}>📌</span>
+                </div>
+                <div style={{ display: "flex", alignItems: "flex-start", gap: "4px", marginBottom: 2 }}>
+                  <span style={{ width: 18, flexShrink: 0 }} />
+                  <span className={`effect-text-single ${textRowCount >= 2 ? "effect-text-sm" : "effect-text-lg"}`} style={{ color: "#374151", flex: 1, minWidth: 0, lineHeight: 1.4, whiteSpace: "normal" as const }}>
+                    {def.effectText}
+                  </span>
+                </div>
+              </>
             )}
           </div>
 
-          {/* Action buttons */}
+          {/* Action buttons — always at bottom */}
           {(handButtons !== null || marketBuyButton !== null || yardReturnButton !== null) && (
-            <div style={{ flexShrink: 0, display: "flex", flexDirection: "column", gap: "4px", marginTop: "6px" }}>
+            <div style={{ marginTop: "auto", paddingTop: "6px", flexShrink: 0, display: "flex", flexDirection: "column", gap: "4px" }}>
               {handButtons}
               {marketBuyButton}
               {yardReturnButton}
@@ -1016,7 +1055,7 @@ export default function CardView({
             >
               שחק
             </button>
-            {def.yardText && !invertEffects && !isCurse && (
+            {(def.yardText || def.yardInfra !== undefined) && !invertEffects && !isCurse && (
               <button
                 onClick={() => onAction("yard", instance.instanceId)}
                 className="bg-emerald-600 hover:bg-emerald-500 text-white px-1.5 py-1 rounded transition-colors text-xs"
@@ -1024,7 +1063,7 @@ export default function CardView({
                 העמד בחצר
               </button>
             )}
-            {def.yardText && invertEffects && !isCurse && (
+            {(def.yardText || def.yardInfra !== undefined) && invertEffects && !isCurse && (
               <button
                 disabled
                 title="הינדיק — לא ניתן להעמיד בחצר התור הזה"

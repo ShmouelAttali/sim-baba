@@ -88,12 +88,11 @@ export default function YardSection({ player, allCardDefs, factions, onReturnFro
             overflowX: "hidden",
             padding: "8px",
             display: "grid",
-            gridTemplateColumns: "repeat(2, 1fr)",
             gridAutoRows: "min-content",
             gap: "6px",
             alignContent: "start",
           }}
-          className="yard-zone-scroll"
+          className="yard-zone-scroll yard-zone"
         >
           {player.yard.map((inst) => {
             const def = getDef(inst.defId);

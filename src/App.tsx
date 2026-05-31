@@ -13,6 +13,7 @@ import PlayerBoard from "./components/PlayerBoard";
 import YardSection from "./components/YardSection";
 import MofetSection from "./components/MofetSection";
 import MarketModal from "./components/MarketModal";
+import { RotateMessage } from "./components/RotateMessage";
 
 type LoadState =
   | { status: "loading" }
@@ -308,7 +309,9 @@ export default function App() {
     });
 
   return (
-    <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}>
+    <>
+    <RotateMessage />
+    <div className="game-main">
 
       <Toast key={toastKeyRef.current} toast={toast} onDismiss={dismissToast} />
 
@@ -355,12 +358,12 @@ export default function App() {
       />
 
       {/* Content area */}
-      <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+      <div className="game-content">
 
         {/* Top 70%: Hand (75%) + Yard (25%) */}
-        <div style={{ flex: "0 0 70%", minHeight: 0, display: "flex", flexDirection: "row" }}>
+        <div className="game-top">
           {/* Hand — 75% */}
-          <div style={{ flex: "0 0 75%", minWidth: 0, borderLeft: "2px solid #e5e7eb", overflow: "hidden" }}>
+          <div className="game-hand">
             <PlayerBoard
               player={currentPlayer}
               allCardDefs={allCardDefs}
@@ -372,7 +375,7 @@ export default function App() {
             />
           </div>
           {/* Yard — 25% */}
-          <div style={{ flex: "0 0 25%", minWidth: 0, overflow: "hidden" }}>
+          <div className="game-yard">
             <YardSection
               player={currentPlayer}
               allCardDefs={allCardDefs}
@@ -383,7 +386,7 @@ export default function App() {
         </div>
 
         {/* Bottom 30%: Mofets */}
-        <div style={{ flex: "0 0 30%", minHeight: 0, overflow: "hidden", borderTop: "2px solid #e5e7eb" }}>
+        <div className="game-mofets">
           <MofetSection
             market={game.market}
             allCardDefs={allCardDefs}
@@ -412,5 +415,6 @@ export default function App() {
         buyBlocked={currentPlayer.blockBuyAndMofetThisTurn}
       />
     </div>
+    </>
   );
 }
